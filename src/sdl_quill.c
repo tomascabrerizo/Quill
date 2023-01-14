@@ -8,6 +8,8 @@
 #define QUILL_PLATFORM
 #include "quill.h"
 
+/* GCM test */
+
 /* NOTE: Platform helper functions */
 static bool freetype_is_initialize;
 static FT_Library freetype_library;
