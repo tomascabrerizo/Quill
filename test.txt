@@ -1,0 +1,11 @@
+#include <stdio.h>
+
+typedef struct Test {
+  unsigned int index;
+  float x, y;
+} Test;
+
+int main(void) {
+  printf("Quill Text Editor\n");
+  return 0;
+}
