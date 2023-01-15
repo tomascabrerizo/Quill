@@ -24,6 +24,10 @@ void freetype_initialize() {
   }
 }
 
+void freetype_shutdow() {
+  FT_Done_FreeType(freetype_library);
+}
+
 /* NOTE: Function from the platform to the program */
 
 QUILL_PLATFORM_API ByteArray load_entire_file(u8 *filename) {
@@ -103,6 +107,8 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size) {
     glyph->codepoint = codepoint;
   }
 
+  FT_Done_Face(face);
+
   return font;
 }
 
@@ -123,52 +129,6 @@ int main(void) {
   assert(window_surface->format->BytesPerPixel == 4);
   assert(window_surface->format->format == SDL_PIXELFORMAT_RGB888);
 
-  Editor *editor = editor_alloc();
-  editor_alloc_backbuffer(editor, window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
-
-  /* NOTE: New Generic gapbuffer test */
-  u64 *buffer = 0;
-
-  gapbuffer_insert(buffer, 1);
-  gapbuffer_insert(buffer, 2);
-  gapbuffer_insert(buffer, 3);
-  gapbuffer_insert(buffer, 4);
-  gapbuffer_print_u64(buffer);
-
-  gapbuffer_step_backward(buffer);
-  gapbuffer_step_backward(buffer);
-  gapbuffer_print_u64(buffer);
-
-  gapbuffer_insert(buffer, 5);
-  gapbuffer_insert(buffer, 7);
-  gapbuffer_insert(buffer, 8);
-  gapbuffer_insert(buffer, 9);
-  gapbuffer_print_u64(buffer);
-
-  for(i32 i = 0; i < 100; ++i)
-    gapbuffer_step_backward(buffer);
-  gapbuffer_print_u64(buffer);
-
-  gapbuffer_insert(buffer, 0);
-  gapbuffer_insert(buffer, 0);
-  gapbuffer_insert(buffer, 0);
-  gapbuffer_print_u64(buffer);
-
-  for(i32 i = 0; i < 100; ++i)
-    gapbuffer_step_foward(buffer);
-  gapbuffer_print_u64(buffer);
-
-  gapbuffer_insert(buffer, 0);
-  gapbuffer_insert(buffer, 0);
-  gapbuffer_insert(buffer, 0);
-  gapbuffer_print_u64(buffer);
-
-  printf("buffer size: %d\n", gapbuffer_size(buffer));
-
-  /* NOTE: Loadin file into GapBuffer test */
-  File *file = file_load_from_existing_file((u8 *)"./test.txt");
-  file_print(file);
-
   /* NOTE: Platform events */
   SDL_Event e;
   while(SDL_WaitEvent(&e)) {
@@ -176,14 +136,35 @@ int main(void) {
       if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
         u32 w = e.window.data1;
         u32 h = e.window.data2;
-        editor_realloc_backbuffer(editor, w, h);
       } else if(e.window.event == SDL_WINDOWEVENT_EXPOSED) {
-        BackBuffer backbuffer = editor->backbuffer;
+        window_surface = SDL_GetWindowSurface(window);
+        SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer.pixels,
+                                                                             backbuffer.w,
+                                                                             backbuffer.h,
+                                                                             backbuffer.bytes_per_pixel*8,
+                                                                             backbuffer.w * backbuffer.bytes_per_pixel,
+                                                                             window_surface->format->format);
 
-        if(rect_is_valid(backbuffer.update_region)) {
-          /* NOTE: Painter test */
-          Painter painter = painter_create(&backbuffer);
-          painter_draw_rect(&painter, backbuffer.update_region, 0x202020);
+        SDL_Rect update_rect = {backbuffer.update_region.l, backbuffer.update_region.t,
+                                backbuffer.update_region.r - backbuffer.update_region.l,
+                                backbuffer.update_region.b - backbuffer.update_region.t};
+
+        SDL_BlitSurface(backbuffer_surface, &update_rect, window_surface, &update_rect);
+        SDL_FreeSurface(backbuffer_surface);
+        SDL_UpdateWindowSurface(window);
+        //SDL_UpdateWindowSurfaceRects(window, (const SDL_Rect *)&update_rect, 1);
+      }
+    } else if(e.type == SDL_TEXTINPUT) {
+
+    } else if(e.type == SDL_QUIT) {
+      printf("Quitting application\n");
+      break;
+    }
+  }
+  return 0;
+}
+
+/*
 
           i32 pen_x = 20;
           i32 pen_y = 20 + editor->font->line_gap;
@@ -191,41 +172,11 @@ int main(void) {
             Line *line = file_get_line_at(file, i);
             for(u32 j = 0; j < line_size(line); ++j) {
               u8 codepoint = line_get_codepoint_at(line, j);
-              painter_draw_glyph(&painter, &editor->font->glyph_table[codepoint], pen_x, pen_y, 0xc0c0c0);
+              painter_draw_glyph(&painter, &editor->font->glyph_table[codepoint], pen_x, pen_y, 0xd0d0d0);
               pen_x += editor->font->advance;
             }
             pen_x = 20;
             pen_y += editor->font->line_gap;
           }
 
-          window_surface = SDL_GetWindowSurface(window);
-          SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer.pixels,
-                                                                               backbuffer.w,
-                                                                               backbuffer.h,
-                                                                               backbuffer.bytes_per_pixel*8,
-                                                                               backbuffer.w * backbuffer.bytes_per_pixel,
-                                                                               window_surface->format->format);
-
-          SDL_Rect update_rect = {backbuffer.update_region.l, backbuffer.update_region.t,
-                                  backbuffer.update_region.r - backbuffer.update_region.l,
-                                  backbuffer.update_region.b - backbuffer.update_region.t};
-
-          SDL_BlitSurface(backbuffer_surface, &update_rect, window_surface, &update_rect);
-          SDL_FreeSurface(backbuffer_surface);
-          SDL_UpdateWindowSurface(window);
-          //SDL_UpdateWindowSurfaceRects(window, (const SDL_Rect *)&update_rect, 1);
-        }
-      }
-    } else if(e.type == SDL_TEXTINPUT) {
-    } else if(e.type == SDL_QUIT) {
-      printf("Quitting application\n");
-      break;
-    }
-  }
-
-  file_destroy(file);
-  editor_free(editor);
-
-
-  return 0;
-}
+*/

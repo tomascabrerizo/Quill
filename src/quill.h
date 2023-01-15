@@ -52,9 +52,9 @@ typedef struct BackBuffer {
   u32 bytes_per_pixel;
 } BackBuffer;
 
-void backbuffer_alloc(BackBuffer *backbuffer, i32 w, i32 h, u32 bytes_per_pixel);
-void backbuffer_free(BackBuffer *backbuffer);
-void backbuffer_realloc(BackBuffer *backbuffer, i32 w, i32 h);
+BackBuffer *backbuffer_create(i32 w, i32 h, u32 bytes_per_pixel);
+void backbuffer_destroy(BackBuffer *backbuffer);
+void backbuffer_resize(BackBuffer *backbuffer, i32 w, i32 h);
 
 typedef struct Glyph {
   u8 *pixels;
@@ -88,23 +88,6 @@ void painter_draw_rect(Painter *painter, Rect rect, u32 color);
 void painter_draw_glyph(Painter *painter, Glyph *glyph, i32 x, i32 y, u32 color);
 void painter_draw_text(Painter *painter, u8 *text, u32 size, i32 x, i32 y, u32 color);
 
-typedef struct TextBuffer {
-  u8 *data;
-  u32 size;
-  u32 f_index;
-  u32 s_index;
-} TextBuffer;
-
-void textbuffer_alloc(TextBuffer *textbuffer, u32 size);
-void textbuffer_free(TextBuffer *textbuffer);
-void textbuffer_step_gap_foward(TextBuffer *textbuffer);
-void textbuffer_step_gap_backward(TextBuffer *textbuffer);
-void textbuffer_grow(TextBuffer *textbuffer);
-void textbuffer_insert(TextBuffer *textbuffer, u16 character);
-void textbuffer_print(TextBuffer *textbuffer);
-
-/* TODO: Create a 2D gap buffer to store lines of text */
-/* TODO: Define better unique names for GAPBUFFER_OBJECT */
 #define GAPBUFFER_OBJECT \
   u8 *data; \
   u32 size; \
@@ -119,26 +102,35 @@ typedef struct GapBufferHeader {
   u32 s_index;
 } GapBufferHeader;
 
-
 void *gapbuffer_grow(void *buffer, u32 element_size);
 
 #define gapbuffer_header(buffer) ((GapBufferHeader *)((u8 *)(buffer) - sizeof(GapBufferHeader)))
+
 #define gapbuffer_capacity(buffer) ((buffer) != 0 ? gapbuffer_header((buffer))->capacity : 0)
+
 #define gapbuffer_f_index(buffer) ((buffer) != 0 ? gapbuffer_header((buffer))->f_index : 0)
+
 #define gapbuffer_s_index(buffer) ((buffer) != 0 ? gapbuffer_header((buffer))->s_index : 1)
+
 #define gapbuffer_size(buffer) ((buffer) != 0 ? \
   (gapbuffer_f_index((buffer)) + gapbuffer_capacity((buffer)) - gapbuffer_s_index((buffer))) : 0)
+
 #define gapbuffer_fit(buffer) ((gapbuffer_f_index((buffer)) == (gapbuffer_s_index((buffer))-1)) ? \
   (buffer) = gapbuffer_grow((buffer), sizeof(*(buffer))) : 0)
+
 #define gapbuffer_step_foward(buffer) (gapbuffer_s_index((buffer)) < gapbuffer_capacity((buffer)) ? \
   ((buffer)[gapbuffer_f_index((buffer))] = (buffer)[gapbuffer_s_index((buffer))], \
   gapbuffer_header((buffer))->f_index++, gapbuffer_header((buffer))->s_index++) : 0)
+
 #define gapbuffer_step_backward(buffer) (gapbuffer_f_index((buffer)) > 0 ? \
   ((buffer)[gapbuffer_s_index((buffer)) - 1] = (buffer)[gapbuffer_f_index((buffer)) - 1], \
   gapbuffer_header((buffer))->f_index--, gapbuffer_header((buffer))->s_index--) : 0)
+
 #define gapbuffer_insert(buffer, value) (gapbuffer_fit((buffer)), \
   (buffer)[gapbuffer_f_index((buffer))] = (value), gapbuffer_header((buffer))->f_index++)
+
 #define gapbuffer_free(buffer) (free(gapbuffer_header((buffer))))
+
 #define gapbuffer_print_u8(buffer) \
   do {\
   for(u32 i = 0; i < gapbuffer_f_index((buffer)); ++i) { \
@@ -150,6 +142,7 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
   } \
   printf("\n"); \
   } while(0)
+
 #define gapbuffer_print_u32(buffer) \
   do {\
   for(u32 i = 0; i < gapbuffer_f_index((buffer)); ++i) { \
@@ -161,6 +154,7 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
   } \
   printf("\n"); \
   } while(0)
+
 #define gapbuffer_print_u64(buffer) \
   do {\
   for(u32 i = 0; i < gapbuffer_f_index((buffer)); ++i) { \
@@ -184,14 +178,8 @@ void line_insert_at_index(Line *line, u32 index, u8 codepoint);
 u8 line_get_codepoint_at(Line *line, u32 index);
 u32 line_size(Line *line);
 
-typedef struct Cursor {
-  u32 col;
-  u32 line;
-} Cursor;
-
 typedef struct File {
-  Line *buffer; /* NOTE: Dynamic gap buffer of Lines */
-  Cursor cursor;
+  Line *buffer;
 } File;
 
 File *file_create();
@@ -202,18 +190,23 @@ void file_print(File *file);
 Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
 
+typedef struct Cursor {
+  u32 col;
+  u32 save_col;
+  u32 line;
+} Cursor;
+
+
 typedef struct Editor {
-  BackBuffer backbuffer;
-  Font *font;
-
   File *file;
-
+  Cursor cursor;
 } Editor;
 
-Editor *editor_alloc(void);
-void editor_free(Editor *editor);
-void editor_alloc_backbuffer(Editor *editor, i32 w, i32 h, u32 bytes_per_pixel);
-void editor_realloc_backbuffer(Editor *editor, i32 w, i32 h);
-void editor_render_textbuffer(Editor *editor, u32 offset_y);
+Editor *editor_create();
+void editor_destroy(Editor *editor);
+void editor_step_cursor_right(Editor *editor);
+void editor_step_cursor_left(Editor *editor);
+void editor_step_cursor_up(Editor *editor);
+void editor_step_cursor_down(Editor *editor);
 
 #endif /* _QUILL_H_ */

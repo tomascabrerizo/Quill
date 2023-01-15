@@ -37,25 +37,27 @@ void rect_print(Rect rect) {
 }
 
 
-void backbuffer_alloc(BackBuffer *backbuffer, i32 w, i32 h, u32 bytes_per_pixel) {
+BackBuffer *backbuffer_create(i32 w, i32 h, u32 bytes_per_pixel) {
+  BackBuffer *backbuffer = (BackBuffer *)malloc(sizeof(BackBuffer));
   backbuffer->w = w;
   backbuffer->h = h;
   backbuffer->bytes_per_pixel = bytes_per_pixel;
   backbuffer->update_region = rect_create(0, w, 0, h);
   backbuffer->pixels = (u32 *)malloc(w * h * bytes_per_pixel);
+  return backbuffer;
 }
 
-void backbuffer_free(BackBuffer *backbuffer) {
+void backbuffer_destroy(BackBuffer *backbuffer) {
   free(backbuffer->pixels);
+  free(backbuffer);
 }
 
-void backbuffer_realloc(BackBuffer *backbuffer, i32 w, i32 h) {
+void backbuffer_resize(BackBuffer *backbuffer, i32 w, i32 h) {
   backbuffer->w = w;
   backbuffer->h = h;
   backbuffer->update_region = rect_create(0, w, 0, h);
   backbuffer->pixels = (u32 *)realloc(backbuffer->pixels, w * h * backbuffer->bytes_per_pixel);
 }
-
 
 Painter painter_create(BackBuffer *backbuffer) {
   Painter painter;
@@ -144,73 +146,6 @@ void *gapbuffer_grow(void *buffer, u32 element_size) {
     printf("buffer grow to:%d elements, %d bytes\n", new_buffer_size, new_buffer_size * element_size);
     return (header + 1);
   }
-}
-
-void textbuffer_alloc(TextBuffer *textbuffer, u32 size) {
-  assert(textbuffer);
-  textbuffer->data = (u8 *)malloc(size);
-  textbuffer->size = size;
-  textbuffer->f_index = 0;
-  textbuffer->s_index = size;
-}
-
-void textbuffer_free(TextBuffer *textbuffer) {
-  assert(textbuffer);
-  free(textbuffer->data);
-}
-
-void textbuffer_step_gap_foward(TextBuffer *textbuffer) {
-  assert(textbuffer);
-  if(textbuffer->s_index < textbuffer->size) {
-    textbuffer->data[textbuffer->f_index] = textbuffer->data[textbuffer->s_index];
-    textbuffer->f_index++;
-    textbuffer->s_index++;
-  }
-}
-
-void textbuffer_step_gap_backward(TextBuffer *textbuffer) {
-  assert(textbuffer);
-  if(textbuffer->f_index > 0) {
-    textbuffer->data[textbuffer->s_index - 1] = textbuffer->data[textbuffer->f_index - 1];
-    textbuffer->f_index--;
-    textbuffer->s_index--;
-  }
-}
-
-void textbuffer_grow(TextBuffer *textbuffer) {
-  assert(textbuffer);
-  u32 new_buffer_size = textbuffer->size * 2;
-  textbuffer->data = (u8 *)realloc(textbuffer->data, new_buffer_size);
-  u32 second_gap_size = (textbuffer->size - textbuffer->s_index);
-  u8 *des = textbuffer->data + new_buffer_size - second_gap_size;
-  u8 *src = textbuffer->data + textbuffer->size - second_gap_size;
-  memmove(des, src, second_gap_size);
-  textbuffer->s_index = new_buffer_size - second_gap_size;
-  textbuffer->size = new_buffer_size;
-  printf("buffer grow to:%d\n", new_buffer_size);
-}
-
-void textbuffer_insert(TextBuffer *textbuffer, u16 character) {
-  assert(textbuffer);
-  assert(textbuffer->f_index < textbuffer->s_index);
-  assert(textbuffer->f_index < textbuffer->size);
-  if(textbuffer->f_index == (textbuffer->s_index - 1)) {
-    textbuffer_grow(textbuffer);
-  }
-  assert(textbuffer->f_index < (textbuffer->s_index - 1));
-  textbuffer->data[textbuffer->f_index] = (u8)character;
-  textbuffer->f_index++;
-}
-
-void textbuffer_print(TextBuffer *textbuffer) {
-  for(u32 i = 0; i < textbuffer->f_index; ++i) {
-    printf("%c", (char)textbuffer->data[i]);
-  }
-  printf("|");
-  for(u32 i = textbuffer->s_index; i < textbuffer->size; ++i) {
-    printf("%c", (char)textbuffer->data[i]);
-  }
-  printf("\n");
 }
 
 static inline Line line_empty_line(void) {
@@ -347,36 +282,62 @@ u32 file_line_count(File *file) {
   return gapbuffer_size(file->buffer);
 }
 
-
-Editor *editor_alloc(void) {
+Editor *editor_create() {
   Editor *editor = (Editor *)malloc(sizeof(Editor));
-  editor->font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 12);
+  memset(editor, 0, sizeof(Editor));
   return editor;
 }
 
-void editor_free(Editor *editor) {
+void editor_destroy(Editor *editor) {
   assert(editor);
-  backbuffer_free(&editor->backbuffer);
+  if(editor->file) {
+    file_destroy(state->editor);
+  }
   free(editor);
 }
 
-void editor_alloc_backbuffer(Editor *editor, i32 w, i32 h, u32 bytes_per_pixel) {
-  backbuffer_alloc(&editor->backbuffer, w, h, bytes_per_pixel);
+void editor_step_cursor_right(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = editor->cursor;
+  assert(cursor.line < file_line_count(file));
+  if(cursor->col < line_size(file_get_line_at(file, cursor->line))) {
+    cursor->col++;
+  } else if(cursor->line < (file_line_count(file) - 1)) {
+    cursor->line++;
+    cursor->col = 0;
+  }
+  cursor->save_col = cursor->col;
 }
 
-void editor_realloc_backbuffer(Editor *editor, i32 w, i32 h) {
-  backbuffer_realloc(&editor->backbuffer, w, h);
+void editor_step_cursor_left(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = editor->cursor;
+  if(cursor->col > 0) {
+    cursor->col--;
+  } else if(cursor->line > 0) {
+    cursor->line--;
+    cursor->col = 0;
+  }
+  cursor->save_col = cursor->col;
 }
 
-void editor_render_textbuffer(Editor *editor, u32 offset_y) {
-  Painter painter = painter_create(&editor->backbuffer);
-  painter_set_font(&painter, editor->font);
-
-  u8 *text1 = (u8 *)"Quill Text Editor!";
-  painter_draw_text(&painter, text1, strlen((char *)text1), 20, editor->font->line_gap*1, 0xc0c0c0);
-
-  (void)editor;
-  (void)offset_y;
+void editor_step_cursor_up(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = editor->cursor;
+  assert(cursor.line < file_line_count(file));
+  if(cursor->line > 0) {
+    cursor->line--;
+    cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
+  }
 }
 
+void editor_step_cursor_down(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = editor->cursor;
+  assert(cursor.line < file_line_count(file));
+  if(cursor->line < (file_line_count(file) - 1)) {
+    cursor->line++;
+    cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
+  }
+}
 
