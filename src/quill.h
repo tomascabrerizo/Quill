@@ -72,7 +72,7 @@ typedef struct Font {
 } Font;
 
 QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size);
-QUILL_PLATFORM_API void font_free(Font *font);
+QUILL_PLATFORM_API void font_destroy(Font *font);
 Glyph *font_get_glyph(u16 codepoint);
 
 typedef struct Painter {
@@ -200,6 +200,8 @@ typedef struct Cursor {
 typedef struct Editor {
   File *file;
   Cursor cursor;
+  u32 col_offset;
+  u32 line_offset;
 } Editor;
 
 Editor *editor_create();
@@ -208,5 +210,7 @@ void editor_step_cursor_right(Editor *editor);
 void editor_step_cursor_left(Editor *editor);
 void editor_step_cursor_up(Editor *editor);
 void editor_step_cursor_down(Editor *editor);
+void editor_cursor_insert(Editor *editor, u8 codepoint);
+void editor_draw_text(Painter *painter, Editor *editor);
 
 #endif /* _QUILL_H_ */

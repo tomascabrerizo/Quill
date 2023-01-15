@@ -112,7 +112,7 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size) {
   return font;
 }
 
-QUILL_PLATFORM_API void font_free(Font *font) {
+QUILL_PLATFORM_API void font_destroy(Font *font) {
   /* TODO: Free all bitmap of each used glyph */
   free(font);
 }
@@ -129,6 +129,11 @@ int main(void) {
   assert(window_surface->format->BytesPerPixel == 4);
   assert(window_surface->format->format == SDL_PIXELFORMAT_RGB888);
 
+  BackBuffer *backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
+  Editor *editor = editor_create();
+  editor->file = file_load_from_existing_file((u8 *)"./test.txt");
+  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 12);
+
   /* NOTE: Platform events */
   SDL_Event e;
   while(SDL_WaitEvent(&e)) {
@@ -136,18 +141,25 @@ int main(void) {
       if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
         u32 w = e.window.data1;
         u32 h = e.window.data2;
+        backbuffer_resize(backbuffer, w, h);
       } else if(e.window.event == SDL_WINDOWEVENT_EXPOSED) {
+
+        Painter painter = painter_create(backbuffer);
+        painter_draw_rect(&painter, backbuffer->update_region, 0x202020);
+        painter_set_font(&painter, font);
+        editor_draw_text(&painter, editor);
+
         window_surface = SDL_GetWindowSurface(window);
-        SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer.pixels,
-                                                                             backbuffer.w,
-                                                                             backbuffer.h,
-                                                                             backbuffer.bytes_per_pixel*8,
-                                                                             backbuffer.w * backbuffer.bytes_per_pixel,
+        SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer->pixels,
+                                                                             backbuffer->w,
+                                                                             backbuffer->h,
+                                                                             backbuffer->bytes_per_pixel*8,
+                                                                             backbuffer->w * backbuffer->bytes_per_pixel,
                                                                              window_surface->format->format);
 
-        SDL_Rect update_rect = {backbuffer.update_region.l, backbuffer.update_region.t,
-                                backbuffer.update_region.r - backbuffer.update_region.l,
-                                backbuffer.update_region.b - backbuffer.update_region.t};
+        SDL_Rect update_rect = {backbuffer->update_region.l, backbuffer->update_region.t,
+                                backbuffer->update_region.r - backbuffer->update_region.l,
+                                backbuffer->update_region.b - backbuffer->update_region.t};
 
         SDL_BlitSurface(backbuffer_surface, &update_rect, window_surface, &update_rect);
         SDL_FreeSurface(backbuffer_surface);
@@ -155,28 +167,39 @@ int main(void) {
         //SDL_UpdateWindowSurfaceRects(window, (const SDL_Rect *)&update_rect, 1);
       }
     } else if(e.type == SDL_TEXTINPUT) {
+      u8 codepoint = (u8)e.text.text[0];
+      editor_cursor_insert(editor, codepoint);
+
+      SDL_Event event;
+      event.type = SDL_WINDOWEVENT;
+      event.window.event = SDL_WINDOWEVENT_EXPOSED;
+      assert(SDL_PushEvent(&event) == 1);
+
+    } else if(e.type == SDL_KEYDOWN) {
+      if(e.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
+        editor_step_cursor_right(editor);
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_LEFT) {
+        editor_step_cursor_left(editor);
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_UP) {
+        editor_step_cursor_up(editor);
+      }else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
+        editor_step_cursor_down(editor);
+      }
+
+      SDL_Event event;
+      event.type = SDL_WINDOWEVENT;
+      event.window.event = SDL_WINDOWEVENT_EXPOSED;
+      assert(SDL_PushEvent(&event) == 1);
 
     } else if(e.type == SDL_QUIT) {
       printf("Quitting application\n");
       break;
     }
   }
+
+  editor_destroy(editor);
+  backbuffer_destroy(backbuffer);
+  font_destroy(font);
+
   return 0;
 }
-
-/*
-
-          i32 pen_x = 20;
-          i32 pen_y = 20 + editor->font->line_gap;
-          for(u32 i = 0; i < file_line_count(file); ++i) {
-            Line *line = file_get_line_at(file, i);
-            for(u32 j = 0; j < line_size(line); ++j) {
-              u8 codepoint = line_get_codepoint_at(line, j);
-              painter_draw_glyph(&painter, &editor->font->glyph_table[codepoint], pen_x, pen_y, 0xd0d0d0);
-              pen_x += editor->font->advance;
-            }
-            pen_x = 20;
-            pen_y += editor->font->line_gap;
-          }
-
-*/

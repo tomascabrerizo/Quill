@@ -166,6 +166,10 @@ void line_insert(Line *line, u8 codepoint) {
 
 void line_insert_at_index(Line *line, u32 index, u8 codepoint) {
   assert(line);
+  if(index == 0) {
+      line_insert(line, codepoint);
+      return;
+  }
   assert(index < gapbuffer_capacity(line->buffer));
   i32 distance = (i32)index - (i32)gapbuffer_f_index(line->buffer);
   if(distance > 0) {
@@ -291,15 +295,15 @@ Editor *editor_create() {
 void editor_destroy(Editor *editor) {
   assert(editor);
   if(editor->file) {
-    file_destroy(state->editor);
+    file_destroy(editor->file);
   }
   free(editor);
 }
 
 void editor_step_cursor_right(Editor *editor) {
   File *file = editor->file;
-  Cursor *cursor = editor->cursor;
-  assert(cursor.line < file_line_count(file));
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
   if(cursor->col < line_size(file_get_line_at(file, cursor->line))) {
     cursor->col++;
   } else if(cursor->line < (file_line_count(file) - 1)) {
@@ -310,8 +314,7 @@ void editor_step_cursor_right(Editor *editor) {
 }
 
 void editor_step_cursor_left(Editor *editor) {
-  File *file = editor->file;
-  Cursor *cursor = editor->cursor;
+  Cursor *cursor = &editor->cursor;
   if(cursor->col > 0) {
     cursor->col--;
   } else if(cursor->line > 0) {
@@ -323,8 +326,8 @@ void editor_step_cursor_left(Editor *editor) {
 
 void editor_step_cursor_up(Editor *editor) {
   File *file = editor->file;
-  Cursor *cursor = editor->cursor;
-  assert(cursor.line < file_line_count(file));
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
   if(cursor->line > 0) {
     cursor->line--;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
@@ -333,11 +336,45 @@ void editor_step_cursor_up(Editor *editor) {
 
 void editor_step_cursor_down(Editor *editor) {
   File *file = editor->file;
-  Cursor *cursor = editor->cursor;
-  assert(cursor.line < file_line_count(file));
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
   if(cursor->line < (file_line_count(file) - 1)) {
     cursor->line++;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
   }
 }
 
+void editor_cursor_insert(Editor *editor, u8 codepoint) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
+  Line *line = file_get_line_at(file, cursor->line);
+  line_insert_at_index(line, cursor->col, codepoint);
+  cursor->col++;
+}
+
+void editor_draw_text(Painter *painter, Editor *editor) {
+  File *file = editor->file;
+  assert(file);
+  i32 start_x = 20;
+  i32 start_y = 20;
+  i32 pen_x = start_x;
+  i32 pen_y = start_y + painter->font->line_gap;
+  for(u32 i = editor->line_offset; i < file_line_count(file); ++i) {
+    Line *line = file_get_line_at(file, i);
+    for(u32 j = editor->col_offset; j < line_size(line); ++j) {
+      u8 codepoint = line_get_codepoint_at(line, j);
+      painter_draw_glyph(painter, &painter->font->glyph_table[codepoint], pen_x, pen_y, 0xd0d0d0);
+      pen_x += painter->font->advance;
+    }
+    pen_x = 20;
+    pen_y += painter->font->line_gap;
+  }
+  Cursor cursor = editor->cursor;
+  i32 l = start_x + cursor.col * painter->font->advance;
+  i32 r = l + 1;
+  i32 t = start_y + cursor.line * painter->font->line_gap;
+  i32 b = t + painter->font->line_gap;
+  Rect cursor_rect = rect_create(l, r, t, b);
+  painter_draw_rect(painter, cursor_rect, 0xff00ff);
+}
