@@ -166,7 +166,7 @@ void line_insert(Line *line, u8 codepoint) {
 
 void line_insert_at_index(Line *line, u32 index, u8 codepoint) {
   assert(line);
-  if(index == 0) {
+  if((gapbuffer_capacity(line->buffer) == 0) || (index == gapbuffer_f_index(line->buffer))) {
       line_insert(line, codepoint);
       return;
   }
@@ -314,12 +314,13 @@ void editor_step_cursor_right(Editor *editor) {
 }
 
 void editor_step_cursor_left(Editor *editor) {
+  File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   if(cursor->col > 0) {
     cursor->col--;
   } else if(cursor->line > 0) {
     cursor->line--;
-    cursor->col = 0;
+    cursor->col = line_size(file_get_line_at(file, cursor->line));
   }
   cursor->save_col = cursor->col;
 }
