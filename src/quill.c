@@ -166,22 +166,19 @@ void line_insert(Line *line, u8 codepoint) {
 
 void line_insert_at_index(Line *line, u32 index, u8 codepoint) {
   assert(line);
-  if((gapbuffer_capacity(line->buffer) == 0) || (index == gapbuffer_f_index(line->buffer))) {
-      line_insert(line, codepoint);
-      return;
-  }
-  assert(index < gapbuffer_capacity(line->buffer));
-  i32 distance = (i32)index - (i32)gapbuffer_f_index(line->buffer);
-  if(distance > 0) {
-    for(u32 i = gapbuffer_f_index(line->buffer); i < index; ++i) {
-      gapbuffer_step_foward(line->buffer);
-    }
-  } else if(distance < 0) {
-    for(u32 i = gapbuffer_f_index(line->buffer); i > index; --i) {
-      gapbuffer_step_backward(line->buffer);
-    }
-  }
-  line_insert(line, codepoint);
+  gapbuffer_move_to(line->buffer, index);
+  gapbuffer_insert(line->buffer, codepoint);
+}
+
+void line_remove(Line *line) {
+  assert(line);
+  gapbuffer_remove(line->buffer);
+}
+
+void line_remove_at_index(Line *line, u32 index) {
+  assert(line);
+  gapbuffer_move_to(line->buffer, index);
+  gapbuffer_remove(line->buffer);
 }
 
 u8 line_get_codepoint_at(Line *line, u32 index) {
@@ -210,7 +207,7 @@ File *file_create() {
 void file_destroy(File *file) {
   assert(file);
   for(u32 i = 0; i < gapbuffer_size(file->buffer); ++i) {
-    Line *line = &file->buffer[i];
+    Line *line = file_get_line_at(file, i);
     if(line->buffer) {
       gapbuffer_free(line->buffer);
     }
@@ -267,7 +264,12 @@ void file_print(File *file) {
 
 void file_insert_new_line(File *file) {
   assert(file);
+  gapbuffer_insert(file->buffer, line_empty_line());
+}
 
+void file_insert_new_line_at(File *file, u32 index) {
+  assert(file);
+  gapbuffer_move_to(file->buffer, index);
   gapbuffer_insert(file->buffer, line_empty_line());
 }
 
@@ -351,7 +353,25 @@ void editor_cursor_insert(Editor *editor, u8 codepoint) {
   assert(cursor->line < file_line_count(file));
   Line *line = file_get_line_at(file, cursor->line);
   line_insert_at_index(line, cursor->col, codepoint);
-  cursor->col++;
+  editor_step_cursor_right(editor);
+}
+
+void editor_cursor_insert_new_line(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
+  file_insert_new_line_at(file, cursor->line);
+  editor_step_cursor_down(editor);
+}
+
+void editor_cursor_remove(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
+  Line *line = file_get_line_at(file, cursor->line);
+  line_remove_at_index(line, cursor->col);
+  editor_step_cursor_left(editor);
+
 }
 
 void editor_draw_text(Painter *painter, Editor *editor) {

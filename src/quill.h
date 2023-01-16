@@ -131,7 +131,27 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
 #define gapbuffer_insert(buffer, value) (gapbuffer_fit((buffer)), \
   (buffer)[gapbuffer_f_index((buffer))] = (value), gapbuffer_header((buffer))->f_index++)
 
+#define gapbuffer_remove(buffer) (gapbuffer_f_index((buffer)) > 0 ? \
+  gapbuffer_header((buffer))->f_index-- : 0)
+
 #define gapbuffer_free(buffer) (free(gapbuffer_header((buffer))))
+
+#define gapbuffer_move_to(buffer, index) \
+  do {\
+  if(index != gapbuffer_f_index(buffer)) { \
+  assert(index < gapbuffer_capacity(buffer)); \
+  i32 distance = (i32)index - (i32)gapbuffer_f_index(buffer); \
+  if(distance > 0) { \
+  for(u32 i = gapbuffer_f_index(buffer); i < index; ++i) { \
+  gapbuffer_step_foward(buffer); \
+  } \
+  } else if(distance < 0) { \
+  for(u32 i = gapbuffer_f_index(buffer); i > index; --i) { \
+  gapbuffer_step_backward(buffer); \
+  } \
+  } \
+  } \
+  } while(0)
 
 #define gapbuffer_print_u8(buffer) \
   do {\
@@ -177,6 +197,8 @@ typedef struct Line {
 void line_free(Line *line);
 void line_insert(Line *line, u8 codepoint);
 void line_insert_at_index(Line *line, u32 index, u8 codepoint);
+void line_remove(Line *line);
+void line_remove_at_index(Line *line, u32 index);
 u8 line_get_codepoint_at(Line *line, u32 index);
 u32 line_size(Line *line);
 
@@ -188,6 +210,7 @@ File *file_create();
 File *file_load_from_existing_file(u8 *filename);
 void file_destroy(File *file);
 void file_insert_new_line(File *file);
+void file_insert_new_line_at(File *file, u32 index);
 void file_print(File *file);
 Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
@@ -197,7 +220,6 @@ typedef struct Cursor {
   u32 save_col;
   u32 line;
 } Cursor;
-
 
 typedef struct Editor {
   File *file;
@@ -213,6 +235,8 @@ void editor_step_cursor_left(Editor *editor);
 void editor_step_cursor_up(Editor *editor);
 void editor_step_cursor_down(Editor *editor);
 void editor_cursor_insert(Editor *editor, u8 codepoint);
+void editor_cursor_insert_new_line(Editor *editor);
+void editor_cursor_remove(Editor *editor);
 void editor_draw_text(Painter *painter, Editor *editor);
 
 #endif /* _QUILL_H_ */

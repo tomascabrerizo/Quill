@@ -186,6 +186,10 @@ int main(void) {
         editor_step_cursor_up(editor);
       }else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
         editor_step_cursor_down(editor);
+      }else if(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE) {
+        editor_cursor_remove(editor);
+      }else if(e.key.keysym.scancode == SDL_SCANCODE_RETURN) {
+        editor_cursor_insert_new_line(editor);
       }
 
       SDL_Event event;
