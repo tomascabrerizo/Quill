@@ -74,6 +74,8 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size) {
   Font *font = (Font *)malloc(sizeof(Font));
   font->line_gap = face->size->metrics.height >> 6;
   font->advance = face->size->metrics.max_advance >> 6;
+  font->ascender = face->size->metrics.ascender >> 6;
+  font->descender = face->size->metrics.descender >> 6;
   for(u16 codepoint = (u16)' '; codepoint <= (u16)'~'; ++codepoint)
   {
     Glyph *glyph = &font->glyph_table[codepoint];

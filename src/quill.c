@@ -373,7 +373,7 @@ void editor_draw_text(Painter *painter, Editor *editor) {
   Cursor cursor = editor->cursor;
   i32 l = start_x + cursor.col * painter->font->advance;
   i32 r = l + 1;
-  i32 t = start_y + cursor.line * painter->font->line_gap;
+  i32 t = start_y + cursor.line * painter->font->line_gap - painter->font->descender;
   i32 b = t + painter->font->line_gap;
   Rect cursor_rect = rect_create(l, r, t, b);
   painter_draw_rect(painter, cursor_rect, 0xff00ff);

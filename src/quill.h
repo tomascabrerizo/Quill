@@ -69,6 +69,8 @@ typedef struct Font {
   Glyph glyph_table[128];
   u32 advance;
   u32 line_gap;
+  i32 ascender;
+  i32 descender;
 } Font;
 
 QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size);
