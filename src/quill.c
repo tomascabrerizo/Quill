@@ -347,7 +347,7 @@ void editor_destroy(Editor *editor) {
 void editor_step_cursor_right(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
-  assert(cursor->line < file_line_count(file));
+  assert(cursor->line <= file_line_count(file));
   if(cursor->col < line_size(file_get_line_at(file, cursor->line))) {
     cursor->col++;
   } else if(cursor->line < (file_line_count(file) - 1)) {
@@ -372,7 +372,7 @@ void editor_step_cursor_left(Editor *editor) {
 void editor_step_cursor_up(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
-  assert(cursor->line > 0);
+  assert(cursor->line <= file_line_count(file));
   if(cursor->line > 0) {
     cursor->line--;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));

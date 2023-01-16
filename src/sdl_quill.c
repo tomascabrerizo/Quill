@@ -133,8 +133,8 @@ int main(void) {
 
   BackBuffer *backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
   Editor *editor = editor_create();
-  editor->file = file_load_from_existing_file((u8 *)"./test.txt");
-  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 12);
+  editor->file = file_load_from_existing_file((u8 *)"./src/quill.c");
+  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 18);
 
   /* NOTE: Platform events */
   SDL_Event e;
