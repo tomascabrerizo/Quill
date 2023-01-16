@@ -183,8 +183,10 @@ void line_remove_at_index(Line *line, u32 index) {
 
 void line_remove_from_front_up_to(Line *line, u32 index) {
   assert(index <= gapbuffer_size(line->buffer));
-  gapbuffer_move_to(line->buffer, index);
-  gapbuffer_header(line->buffer)->f_index = 0;
+  if(line->buffer) {
+    gapbuffer_move_to(line->buffer, index);
+    gapbuffer_header(line->buffer)->f_index = 0;
+  }
 }
 
 void line_copy(Line *des, Line *src, u32 count) {
@@ -372,10 +374,12 @@ void editor_cursor_insert_new_line(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
+
   file_insert_new_line_at(file, cursor->line);
   Line *new_line = file_get_line_at(file, cursor->line);
   editor_step_cursor_down(editor);
   Line *old_line = file_get_line_at(file, cursor->line);
+  (void)new_line; (void)old_line;
   line_copy(new_line, old_line, cursor->col);
   line_remove_from_front_up_to(old_line, cursor->col);
 
