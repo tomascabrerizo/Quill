@@ -201,6 +201,7 @@ void line_remove(Line *line);
 void line_remove_at_index(Line *line, u32 index);
 void line_remove_from_front_up_to(Line *line, u32 index);
 void line_copy(Line *des, Line *src, u32 count);
+void line_copy_at(Line *des, Line *src, u32 count, u32 index);
 u8 line_get_codepoint_at(Line *line, u32 index);
 u32 line_size(Line *line);
 
@@ -213,6 +214,8 @@ File *file_load_from_existing_file(u8 *filename);
 void file_destroy(File *file);
 void file_insert_new_line(File *file);
 void file_insert_new_line_at(File *file, u32 index);
+void file_remove_line(File *file);
+void file_remove_line_at(File *file, u32 index);
 void file_print(File *file);
 Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
