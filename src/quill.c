@@ -181,6 +181,20 @@ void line_remove_at_index(Line *line, u32 index) {
   gapbuffer_remove(line->buffer);
 }
 
+void line_remove_from_front_up_to(Line *line, u32 index) {
+  assert(index <= gapbuffer_size(line->buffer));
+  gapbuffer_move_to(line->buffer, index);
+  gapbuffer_header(line->buffer)->f_index = 0;
+}
+
+void line_copy(Line *des, Line *src, u32 count) {
+  assert(count <= line_size(src));
+  for(u32 i = 0; i < count; ++i) {
+    u8 codepoint = line_get_codepoint_at(src, i);
+    line_insert(des, codepoint);
+  }
+}
+
 u8 line_get_codepoint_at(Line *line, u32 index) {
   /* TODO: Make this iterator a macro to use in all gap buffers */
   assert(index < gapbuffer_size(line->buffer));
@@ -195,8 +209,6 @@ u8 line_get_codepoint_at(Line *line, u32 index) {
 u32 line_size(Line *line) {
   return gapbuffer_size(line->buffer);
 }
-
-
 
 File *file_create() {
   File *file = (File *)malloc(sizeof(File));
@@ -361,7 +373,14 @@ void editor_cursor_insert_new_line(Editor *editor) {
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
   file_insert_new_line_at(file, cursor->line);
+  Line *new_line = file_get_line_at(file, cursor->line);
   editor_step_cursor_down(editor);
+  Line *old_line = file_get_line_at(file, cursor->line);
+  line_copy(new_line, old_line, cursor->col);
+  line_remove_from_front_up_to(old_line, cursor->col);
+
+  cursor->col = 0;
+  cursor->save_col = cursor->col;
 }
 
 void editor_cursor_remove(Editor *editor) {
@@ -371,7 +390,6 @@ void editor_cursor_remove(Editor *editor) {
   Line *line = file_get_line_at(file, cursor->line);
   line_remove_at_index(line, cursor->col);
   editor_step_cursor_left(editor);
-
 }
 
 void editor_draw_text(Painter *painter, Editor *editor) {

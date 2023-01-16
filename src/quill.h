@@ -199,6 +199,8 @@ void line_insert(Line *line, u8 codepoint);
 void line_insert_at_index(Line *line, u32 index, u8 codepoint);
 void line_remove(Line *line);
 void line_remove_at_index(Line *line, u32 index);
+void line_remove_from_front_up_to(Line *line, u32 index);
+void line_copy(Line *des, Line *src, u32 count);
 u8 line_get_codepoint_at(Line *line, u32 index);
 u32 line_size(Line *line);
 
