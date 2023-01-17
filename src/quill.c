@@ -353,7 +353,7 @@ void editor_step_cursor_right(Editor *editor) {
   if(cursor->col < line_size(file_get_line_at(file, cursor->line))) {
     cursor->col++;
   } else if(cursor->line < (file_line_count(file) - 1)) {
-    cursor->line++;
+    editor_step_cursor_down(editor);
     cursor->col = 0;
   }
   cursor->save_col = cursor->col;
@@ -365,7 +365,7 @@ void editor_step_cursor_left(Editor *editor) {
   if(cursor->col > 0) {
     cursor->col--;
   } else if(cursor->line > 0) {
-    cursor->line--;
+    editor_step_cursor_up(editor);
     cursor->col = line_size(file_get_line_at(file, cursor->line));
   }
   cursor->save_col = cursor->col;
@@ -383,9 +383,6 @@ void editor_step_cursor_up(Editor *editor) {
     cursor->line--;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
   }
-
-
-
 }
 
 void editor_step_cursor_down(Editor *editor) {
