@@ -244,4 +244,12 @@ void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
 void editor_draw_text(Painter *painter, Editor *editor);
 
+typedef struct Platform {
+  u32 window_width;
+  u32 window_height;
+  u32 mouse_pos_x;
+  u32 mouse_pos_y;
+  Font *font;
+} Platform;
+
 #endif /* _QUILL_H_ */

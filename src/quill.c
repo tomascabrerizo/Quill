@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <string.h>
 
+Platform platform;
+
 Rect rect_create(i32 l, i32 r, i32 t, i32 b) {
   Rect rect = {l, r, t, b};
   return rect;
@@ -374,9 +376,16 @@ void editor_step_cursor_up(Editor *editor) {
   Cursor *cursor = &editor->cursor;
   assert(cursor->line <= file_line_count(file));
   if(cursor->line > 0) {
+    if(cursor->line == editor->line_offset) {
+      editor->line_offset--;
+    }
+
     cursor->line--;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
   }
+
+
+
 }
 
 void editor_step_cursor_down(Editor *editor) {
@@ -384,6 +393,13 @@ void editor_step_cursor_down(Editor *editor) {
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
   if(cursor->line < (file_line_count(file) - 1)) {
+
+    u32 total_lines_view = platform.window_height / platform.font->line_gap;
+    u32 one_pass_last_view_line = MIN(editor->line_offset + total_lines_view, file_line_count(file));
+    if(cursor->line == one_pass_last_view_line - 1) {
+      editor->line_offset++;
+    }
+
     cursor->line++;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
   }
@@ -437,24 +453,33 @@ void editor_cursor_remove(Editor *editor) {
 void editor_draw_text(Painter *painter, Editor *editor) {
   File *file = editor->file;
   assert(file);
-  i32 start_x = 20;
-  i32 start_y = 20;
+
+  /* TODO: Save start_x and start_y into the editor to offset calculation or do something better */
+  i32 start_x = 0;
+  i32 start_y = 0;
+
+  u32 total_lines_to_render = platform.window_height / platform.font->line_gap;
+  u32 max_lines_to_render = MIN(editor->line_offset + total_lines_to_render, file_line_count(file));
+
+  //printf("total_lines_to_render:%d, max_line_to_render:%d\n", total_lines_to_render, max_lines_to_render);
+
   i32 pen_x = start_x;
   i32 pen_y = start_y + painter->font->line_gap;
-  for(u32 i = editor->line_offset; i < file_line_count(file); ++i) {
+  for(u32 i = editor->line_offset; i < max_lines_to_render; ++i) {
     Line *line = file_get_line_at(file, i);
     for(u32 j = editor->col_offset; j < line_size(line); ++j) {
       u8 codepoint = line_get_codepoint_at(line, j);
       painter_draw_glyph(painter, &painter->font->glyph_table[codepoint], pen_x, pen_y, 0xd0d0d0);
       pen_x += painter->font->advance;
     }
-    pen_x = 20;
+    pen_x = start_x;
     pen_y += painter->font->line_gap;
   }
+
   Cursor cursor = editor->cursor;
-  i32 l = start_x + cursor.col * painter->font->advance;
-  i32 r = l + 1;
-  i32 t = start_y + cursor.line * painter->font->line_gap - painter->font->descender;
+  i32 l = start_x + ((i32)cursor.col - (i32)editor->col_offset) * painter->font->advance;
+  i32 r = l + 2;
+  i32 t = start_y + ((i32)cursor.line - (i32)editor->line_offset) * painter->font->line_gap - painter->font->descender;
   i32 b = t + painter->font->line_gap;
   Rect cursor_rect = rect_create(l, r, t, b);
   painter_draw_rect(painter, cursor_rect, 0xff00ff);

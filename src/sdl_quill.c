@@ -8,8 +8,6 @@
 #define QUILL_PLATFORM
 #include "quill.h"
 
-/* GCM test */
-
 /* NOTE: Platform helper functions */
 static bool freetype_is_initialize;
 static FT_Library freetype_library;
@@ -119,6 +117,9 @@ QUILL_PLATFORM_API void font_destroy(Font *font) {
   free(font);
 }
 
+/* NOTE: Platfom is a gobal variable define in quill.c that the platform need to implements */
+extern Platform platform;
+
 /* NOTE: Each platfrom need its main function */
 
 int main(void) {
@@ -131,19 +132,22 @@ int main(void) {
   assert(window_surface->format->BytesPerPixel == 4);
   assert(window_surface->format->format == SDL_PIXELFORMAT_RGB888);
 
+  platform.window_width = window_surface->w;
+  platform.window_height = window_surface->h;
   BackBuffer *backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
   Editor *editor = editor_create();
-  editor->file = file_load_from_existing_file((u8 *)"./src/quill.c");
-  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 18);
+  editor->file = file_load_from_existing_file((u8 *)"./src/quill.h");
+  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 12);
+  platform.font = font;
 
   /* NOTE: Platform events */
   SDL_Event e;
   while(SDL_WaitEvent(&e)) {
     if(e.type == SDL_WINDOWEVENT) {
       if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
-        u32 w = e.window.data1;
-        u32 h = e.window.data2;
-        backbuffer_resize(backbuffer, w, h);
+        platform.window_width = e.window.data1;
+        platform.window_height = e.window.data2;
+        backbuffer_resize(backbuffer, platform.window_width, platform.window_height);
       } else if(e.window.event == SDL_WINDOWEVENT_EXPOSED) {
 
         Painter painter = painter_create(backbuffer);
