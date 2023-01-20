@@ -145,7 +145,6 @@ void *gapbuffer_grow(void *buffer, u32 element_size) {
     memmove(des, src, second_gap_size * element_size);
     header->s_index = new_buffer_size - second_gap_size;
     header->capacity = new_buffer_size;
-    printf("buffer grow to:%d elements, %d bytes\n", new_buffer_size, new_buffer_size * element_size);
     return (header + 1);
   }
 }
@@ -431,21 +430,42 @@ void editor_cursor_remove(Editor *editor) {
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
   Line *line = file_get_line_at(file, cursor->line);
-
-  if((cursor->line > 0) && (cursor->col == 0)) {
-    Line *first_line = file_get_line_at(file, cursor->line);
-    Line *second_line = file_get_line_at(file, cursor->line - 1);
-    u32 second_line_size = line_size(second_line);
-    line_copy_at(first_line, second_line, second_line_size, 0);
-    file_remove_line_at(file, cursor->line);
-    editor_step_cursor_up(editor);
-    cursor->col = second_line_size;
-    cursor->save_col = cursor->col;
+  if(cursor->col == 0) {
+    if(cursor->line > 0) {
+      Line *first_line = file_get_line_at(file, cursor->line);
+      Line *second_line = file_get_line_at(file, cursor->line - 1);
+      u32 second_line_size = line_size(second_line);
+      line_copy_at(first_line, second_line, second_line_size, 0);
+      file_remove_line_at(file, cursor->line);
+      editor_step_cursor_up(editor);
+      cursor->col = second_line_size;
+      cursor->save_col = cursor->col;
+    }
   } else {
     line_remove_at_index(line, cursor->col);
     editor_step_cursor_left(editor);
   }
 }
+
+void editor_cursor_remove_right(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
+  Line *line = file_get_line_at(file, cursor->line);
+
+  if(cursor->col == line_size(line)) {
+    if(cursor->line < (file_line_count(file) - 1)) {
+      Line *first_line = file_get_line_at(file, cursor->line);
+      Line *second_line = file_get_line_at(file, cursor->line + 1);
+      u32 first_line_size = line_size(first_line);
+      line_copy_at(second_line, first_line, first_line_size, 0);
+      file_remove_line_at(file, cursor->line + 1);
+    }
+  } else {
+    line_remove_at_index(line, cursor->col + 1);
+  }
+}
+
 
 void editor_draw_text(Painter *painter, Editor *editor) {
   File *file = editor->file;

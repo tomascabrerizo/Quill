@@ -242,6 +242,7 @@ void editor_step_cursor_down(Editor *editor);
 void editor_cursor_insert(Editor *editor, u8 codepoint);
 void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
+void editor_cursor_remove_right(Editor *editor);
 void editor_draw_text(Painter *painter, Editor *editor);
 
 typedef struct Platform {

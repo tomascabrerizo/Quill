@@ -136,8 +136,8 @@ int main(void) {
   platform.window_height = window_surface->h;
   BackBuffer *backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
   Editor *editor = editor_create();
-  editor->file = file_load_from_existing_file((u8 *)"./src/quill.h");
-  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 12);
+  editor->file = file_load_from_existing_file((u8 *)"./test.txt");
+  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);
   platform.font = font;
 
   /* NOTE: Platform events */
@@ -188,11 +188,13 @@ int main(void) {
         editor_step_cursor_left(editor);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_UP) {
         editor_step_cursor_up(editor);
-      }else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
         editor_step_cursor_down(editor);
-      }else if(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE) {
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE) {
         editor_cursor_remove(editor);
-      }else if(e.key.keysym.scancode == SDL_SCANCODE_RETURN) {
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_DELETE) {
+        editor_cursor_remove_right(editor);
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_RETURN) {
         editor_cursor_insert_new_line(editor);
       }
 
