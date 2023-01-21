@@ -331,6 +331,10 @@ u32 file_line_count(File *file) {
   return gapbuffer_size(file->buffer);
 }
 
+void cursor_print(Cursor cursor) {
+  printf("line:%d, col:%d\n", cursor.line, cursor.col);
+}
+
 Editor *editor_create() {
   Editor *editor = (Editor *)malloc(sizeof(Editor));
   memset(editor, 0, sizeof(Editor));
@@ -452,7 +456,6 @@ void editor_cursor_remove_right(Editor *editor) {
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
   Line *line = file_get_line_at(file, cursor->line);
-
   if(cursor->col == line_size(line)) {
     if(cursor->line < (file_line_count(file) - 1)) {
       Line *first_line = file_get_line_at(file, cursor->line);
@@ -464,6 +467,53 @@ void editor_cursor_remove_right(Editor *editor) {
   } else {
     line_remove_at_index(line, cursor->col + 1);
   }
+}
+
+void editor_update_selected(Editor *editor, bool selected) {
+  if(!editor->selected && selected) {
+    editor->selected = true;
+    editor->selection_mark = editor->cursor;
+  } else if(!selected) {
+    editor->selected = false;
+    editor->selection_mark = editor->cursor;
+  }
+}
+
+bool editor_is_selected(Editor *editor, u32 line, u32 col) {
+  if(editor->selected) {
+    Cursor start = editor->selection_mark;
+    Cursor end = editor->cursor;
+
+    if(end.line < start.line) {
+      Cursor temp = start;
+      start = end;
+      end = temp;
+    } else if(end.line == start.line) {
+      if(end.col < start.col) {
+        Cursor temp = start;
+        start = end;
+        end = temp;
+      }
+    }
+
+    if(start.line == end.line && start.line == line) {
+      if(col >= start.col && col < end.col) {
+        return true;
+      }
+    } else if(line == start.line && line <= end.line) {
+      if(col >= start.col) {
+        return true;
+      }
+    } else if(line == end.line && line >= start.line) {
+      if(col < end.col) {
+        return true;
+      }
+    } else if((line > start.line) && (line < end.line)) {
+      return true;
+    }
+    return false;
+  }
+  return false;
 }
 
 
@@ -478,15 +528,24 @@ void editor_draw_text(Painter *painter, Editor *editor) {
   u32 total_lines_to_render = platform.window_height / platform.font->line_gap;
   u32 max_lines_to_render = MIN(editor->line_offset + total_lines_to_render, file_line_count(file));
 
-  //printf("total_lines_to_render:%d, max_line_to_render:%d\n", total_lines_to_render, max_lines_to_render);
-
   i32 pen_x = start_x;
   i32 pen_y = start_y + painter->font->line_gap;
   for(u32 i = editor->line_offset; i < max_lines_to_render; ++i) {
     Line *line = file_get_line_at(file, i);
     for(u32 j = editor->col_offset; j < line_size(line); ++j) {
+
       u8 codepoint = line_get_codepoint_at(line, j);
-      painter_draw_glyph(painter, &painter->font->glyph_table[codepoint], pen_x, pen_y, 0xd0d0d0);
+      Glyph *glyph = &painter->font->glyph_table[codepoint];
+
+      if(editor_is_selected(editor, i, j)) {
+        i32 x = pen_x;
+        i32 y = pen_y - painter->font->line_gap - painter->font->descender;
+        Rect rect = rect_create(x, x + painter->font->advance,
+                                y, y + painter->font->line_gap);
+        painter_draw_rect(painter, rect, 0x0000bb);
+      }
+
+      painter_draw_glyph(painter, glyph, pen_x, pen_y, 0xd0d0d0);
       pen_x += painter->font->advance;
     }
     pen_x = start_x;

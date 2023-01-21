@@ -136,7 +136,7 @@ int main(void) {
   platform.window_height = window_surface->h;
   BackBuffer *backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
   Editor *editor = editor_create();
-  editor->file = file_load_from_existing_file((u8 *)"./test.txt");
+  editor->file = file_load_from_existing_file((u8 *)"./src/quill.c");
   Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);
   platform.font = font;
 
@@ -182,6 +182,14 @@ int main(void) {
       assert(SDL_PushEvent(&event) == 1);
 
     } else if(e.type == SDL_KEYDOWN) {
+
+      if((e.key.keysym.scancode == SDL_SCANCODE_RIGHT) ||
+         (e.key.keysym.scancode == SDL_SCANCODE_LEFT) ||
+         (e.key.keysym.scancode == SDL_SCANCODE_UP) ||
+         (e.key.keysym.scancode == SDL_SCANCODE_DOWN)) {
+        editor_update_selected(editor, e.key.keysym.mod & KMOD_SHIFT);
+      }
+
       if(e.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
         editor_step_cursor_right(editor);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_LEFT) {
