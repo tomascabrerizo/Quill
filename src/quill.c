@@ -527,10 +527,8 @@ void editor_remove_selection(Editor *editor) {
   }
 
   editor->selected = false;
-  cursor->col = start.col;
-  cursor->line = start.line;
+  *cursor = start;
   return;
-
 }
 
 void editor_update_selected(Editor *editor, bool selected) {
