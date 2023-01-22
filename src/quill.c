@@ -430,6 +430,11 @@ void editor_cursor_insert_new_line(Editor *editor) {
 }
 
 void editor_cursor_remove(Editor *editor) {
+  if(editor->selected) {
+    editor_remove_selection(editor);
+    return;
+  }
+
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
@@ -452,6 +457,11 @@ void editor_cursor_remove(Editor *editor) {
 }
 
 void editor_cursor_remove_right(Editor *editor) {
+  if(editor->selected) {
+    editor_remove_selection(editor);
+    return;
+  }
+
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
@@ -469,6 +479,60 @@ void editor_cursor_remove_right(Editor *editor) {
   }
 }
 
+static inline Cursor cursor_min(Cursor a, Cursor b) {
+  if(a.line == b.line) {
+    return (a.col < b.col) ? a : b;
+  }
+  return (a.line < b.line) ? a : b;
+}
+
+static inline Cursor cursor_max(Cursor a, Cursor b) {
+  if(a.line == b.line) {
+    return (a.col > b.col) ? a : b;
+  }
+  return (a.line > b.line) ? a : b;
+}
+
+/* TODO: Move this function into line API */
+static inline void line_remove_range(Line *line, u32 start, u32 end) {
+  u32 remove_cout = end - start;
+  for(u32 i = 0; i < remove_cout; ++i) {
+    line_remove_at_index(line, start + 1);
+  }
+}
+
+void editor_remove_selection(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+
+  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+
+  if(start.line == end.line) {
+    Line *line = file_get_line_at(file, start.line);
+    line_remove_range(line, start.col, end.col);
+  } else if((end.line - start.line) > 0) {
+
+    Line *line_start = file_get_line_at(file, start.line);
+    line_remove_range(line_start, start.col, line_size(line_start));
+    Line *line_end = file_get_line_at(file, end.line);
+    line_remove_range(line_end, 0, end.col);
+    line_copy_at(line_start, line_end, line_size(line_end), line_size(line_start));
+    file_remove_line_at(file, end.line + 1);
+
+    u32 middle_lines_count = end.line - start.line - 1;
+    for(u32 i = 0; i < middle_lines_count; ++i) {
+      file_remove_line_at(file, start.line + 2);
+    }
+  }
+
+  editor->selected = false;
+  cursor->col = start.col;
+  cursor->line = start.line;
+  return;
+
+}
+
 void editor_update_selected(Editor *editor, bool selected) {
   if(!editor->selected && selected) {
     editor->selected = true;
@@ -481,20 +545,9 @@ void editor_update_selected(Editor *editor, bool selected) {
 
 bool editor_is_selected(Editor *editor, u32 line, u32 col) {
   if(editor->selected) {
-    Cursor start = editor->selection_mark;
-    Cursor end = editor->cursor;
 
-    if(end.line < start.line) {
-      Cursor temp = start;
-      start = end;
-      end = temp;
-    } else if(end.line == start.line) {
-      if(end.col < start.col) {
-        Cursor temp = start;
-        start = end;
-        end = temp;
-      }
-    }
+    Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+    Cursor end = cursor_max(editor->cursor, editor->selection_mark);
 
     if(start.line == end.line && start.line == line) {
       if(col >= start.col && col < end.col) {
