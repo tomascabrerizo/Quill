@@ -149,15 +149,24 @@ void *gapbuffer_grow(void *buffer, u32 element_size) {
   }
 }
 
-static inline Line line_empty_line(void) {
-  Line line;
-  memset(&line, 0, sizeof(line));
+Line *line_create(void) {
+  Line *line = (Line *)malloc(sizeof(Line));
+  memset(line , 0, sizeof(Line));
   return line;
 }
 
-void line_free(Line *line) {
+void line_destroy(Line *line) {
   assert(line);
   gapbuffer_free(line->buffer);
+  free(line);
+}
+
+void line_reset(Line *line) {
+  if(gapbuffer_capacity(line->buffer) > 0) {
+    GapBufferHeader *header = gapbuffer_header(line->buffer);
+    header->f_index = 0;
+    header->s_index = header->capacity;
+  }
 }
 
 void line_insert(Line *line, u8 codepoint) {
@@ -244,28 +253,53 @@ void file_destroy(File *file) {
       gapbuffer_free(line->buffer);
     }
   }
+
+  Line *free_line = file->line_first_free;
+  while(free_line) {
+    Line *next_to_free = free_line->next;
+    free(free_line);
+    free_line = next_to_free;
+  }
+
   gapbuffer_free(file->buffer);
   free(file);
 }
 
+Line *file_line_create(File *file) {
+  if(file->line_first_free) {
+    Line *line = file->line_first_free;
+    file->line_first_free = file->line_first_free->next;
+    line_reset(line);
+    return line;
+  }
+  return line_create();
+}
+
+void file_line_free(File *file, Line *line) {
+  line->next = file->line_first_free;
+  file->line_first_free = line;
+}
+
 File *file_load_from_existing_file(u8 *filename) {
+  /* TODO: Maybe load the file with memcpy into the seconds gap */
+
   ByteArray buffer = load_entire_file(filename);
   File *file = file_create();
   if(buffer.size > 0) {
     file_insert_new_line(file);
 
-  }
-  /* TODO: Maybe load the file with memcpy into the seconds gap */
-  u32 line_count = 0;
-  Line *line = &file->buffer[line_count++];
-  for(u32 i = 0; i < buffer.size; ++i) {
-    u8 codepoint = buffer.data[i];
-    if(codepoint != '\n') {
-      line_insert(line, codepoint);
-    } else {
-      file_insert_new_line(file);
-      line = &file->buffer[line_count++];
+    u32 line_count = 0;
+    Line *line = file->buffer[line_count++];
+    for(u32 i = 0; i < buffer.size; ++i) {
+      u8 codepoint = buffer.data[i];
+      if(codepoint != '\n') {
+        line_insert(line, codepoint);
+      } else {
+        file_insert_new_line(file);
+        line = file->buffer[line_count++];
+      }
     }
+
   }
   return file;
 }
@@ -273,7 +307,7 @@ File *file_load_from_existing_file(u8 *filename) {
 void file_print(File *file) {
   printf("file lines: %d\n", gapbuffer_size(file->buffer));
   for(u32 i = 0; i < gapbuffer_f_index(file->buffer); ++i) {
-    Line *line = &file->buffer[i];
+    Line *line = file->buffer[i];
     for(u32 j = 0; j < gapbuffer_f_index(line->buffer); ++j) {
       printf("%c", line->buffer[j]);
     }
@@ -283,7 +317,7 @@ void file_print(File *file) {
     printf("\n");
   }
   for(u32 i = gapbuffer_s_index(file->buffer); i < gapbuffer_capacity(file->buffer); ++i) {
-    Line *line = &file->buffer[i];
+    Line *line = file->buffer[i];
     for(u32 j = 0; j < gapbuffer_f_index(line->buffer); ++j) {
       printf("%c", line->buffer[j]);
     }
@@ -296,34 +330,37 @@ void file_print(File *file) {
 
 void file_insert_new_line(File *file) {
   assert(file);
-  gapbuffer_insert(file->buffer, line_empty_line());
+  Line *new_line = file_line_create(file);
+  gapbuffer_insert(file->buffer, new_line);
 }
 
 void file_insert_new_line_at(File *file, u32 index) {
   assert(file);
   gapbuffer_move_to(file->buffer, index);
-  gapbuffer_insert(file->buffer, line_empty_line());
+  file_insert_new_line(file);
 }
 
 void file_remove_line(File *file) {
   assert(file);
+  Line *line = gapbuffer_get_at_gap(file->buffer);
+  file_line_free(file, line);
   gapbuffer_remove(file->buffer);
 }
 
 void file_remove_line_at(File *file, u32 index) {
   assert(file);
   gapbuffer_move_to(file->buffer, index);
-  gapbuffer_remove(file->buffer);
+  file_remove_line(file);
 }
 
 Line *file_get_line_at(File *file, u32 index) {
   /* TODO: Make this iterator a macro to use in all gap buffers */
   assert(index < gapbuffer_size(file->buffer));
   if(index < gapbuffer_f_index(file->buffer)) {
-    return &file->buffer[index];
+    return file->buffer[index];
   } else {
     u32 offset = index - gapbuffer_f_index(file->buffer);
-    return &file->buffer[gapbuffer_s_index(file->buffer) + offset];
+    return file->buffer[gapbuffer_s_index(file->buffer) + offset];
   }
 }
 
@@ -419,12 +456,14 @@ void editor_cursor_insert_new_line(Editor *editor) {
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
   file_insert_new_line_at(file, cursor->line);
+
   Line *new_line = file_get_line_at(file, cursor->line);
   editor_step_cursor_down(editor);
   Line *old_line = file_get_line_at(file, cursor->line);
-  (void)new_line; (void)old_line;
+
   line_copy(new_line, old_line, cursor->col);
   line_remove_from_front_up_to(old_line, cursor->col);
+
   cursor->col = 0;
   cursor->save_col = cursor->col;
 }
@@ -593,7 +632,7 @@ void editor_draw_text(Painter *painter, Editor *editor) {
         i32 y = pen_y - painter->font->line_gap - painter->font->descender;
         Rect rect = rect_create(x, x + painter->font->advance,
                                 y, y + painter->font->line_gap);
-        painter_draw_rect(painter, rect, 0x0000bb);
+        painter_draw_rect(painter, rect, 0x2761fa);
       }
 
       painter_draw_glyph(painter, glyph, pen_x, pen_y, 0xd0d0d0);

@@ -136,6 +136,8 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
 
 #define gapbuffer_free(buffer) (free(gapbuffer_header((buffer))))
 
+#define gapbuffer_get_at_gap(buffer) ((buffer)[gapbuffer_f_index((buffer))-1])
+
 #define gapbuffer_move_to(buffer, index) \
   do {\
   if(index != gapbuffer_f_index(buffer)) { \
@@ -192,9 +194,14 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
 /* TODO: Handle unicode characters */
 typedef struct Line {
   u8 *buffer; /* NOTE: Dynamic gap buffer of characters */
+
+  /* NOTE: Node to handle file freelist of lines */
+  struct Line *next;
 } Line;
 
-void line_free(Line *line);
+Line *line_create(void);
+void line_destroy(Line *line);
+void line_reset(Line *line);
 void line_insert(Line *line, u8 codepoint);
 void line_insert_at_index(Line *line, u32 index, u8 codepoint);
 void line_remove(Line *line);
@@ -206,12 +213,19 @@ u8 line_get_codepoint_at(Line *line, u32 index);
 u32 line_size(Line *line);
 
 typedef struct File {
-  Line *buffer;
+  Line **buffer;
+
+  /* NOTE: Line freelist */
+  Line *line_first_free;
 } File;
 
 File *file_create();
-File *file_load_from_existing_file(u8 *filename);
 void file_destroy(File *file);
+
+Line *file_line_create(File *file);
+void file_line_free(File *file, Line *line);
+
+File *file_load_from_existing_file(u8 *filename);
 void file_insert_new_line(File *file);
 void file_insert_new_line_at(File *file, u32 index);
 void file_remove_line(File *file);

@@ -128,6 +128,10 @@ int main(void) {
   SDL_Window *window = SDL_CreateWindow("Quill", 100, 100, 640, 480, SDL_WINDOW_RESIZABLE);
   SDL_ShowWindow(window);
 
+  /* TODO: Create and load Quill icon */
+  SDL_Surface *icon = SDL_LoadBMP("./data/quill_icon.bmp");
+  SDL_SetWindowIcon(window, icon);
+
   SDL_Surface *window_surface = SDL_GetWindowSurface(window);
   assert(window_surface->format->BytesPerPixel == 4);
   assert(window_surface->format->format == SDL_PIXELFORMAT_RGB888);
