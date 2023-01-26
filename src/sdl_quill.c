@@ -139,8 +139,15 @@ int main(void) {
   platform.window_width = window_surface->w;
   platform.window_height = window_surface->h;
   BackBuffer *backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
-  Editor *editor = editor_create();
-  editor->file = file_load_from_existing_file((u8 *)"./src/quill.c");
+
+  Editor *editor0 = editor_create();
+  editor0->file = file_load_from_existing_file((u8 *)"./src/quill.c");
+
+  Editor *editor1 = editor_create();
+  editor1->file = file_load_from_existing_file((u8 *)"./src/quill.h");
+
+  Editor *editor = editor1;
+
   Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);
   platform.font = font;
 
@@ -148,16 +155,27 @@ int main(void) {
   SDL_Event e;
   while(SDL_WaitEvent(&e)) {
     if(e.type == SDL_WINDOWEVENT) {
-      if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
+      if(e.window.event == SDL_WINDOWEVENT_SHOWN) {
+
+        editor0->rect = rect_create(0, platform.window_width/2, 0, platform.window_height);
+        editor1->rect = rect_create(platform.window_width/2, platform.window_width,
+                                    0, platform.window_height);
+
+      } else if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
         platform.window_width = e.window.data1;
         platform.window_height = e.window.data2;
         backbuffer_resize(backbuffer, platform.window_width, platform.window_height);
+        editor0->rect = rect_create(0, platform.window_width/2, 0, platform.window_height);
+        editor1->rect = rect_create(platform.window_width/2, platform.window_width,
+                                    0, platform.window_height);
+
       } else if(e.window.event == SDL_WINDOWEVENT_EXPOSED) {
 
         Painter painter = painter_create(backbuffer);
         painter_draw_rect(&painter, backbuffer->update_region, 0x202020);
         painter_set_font(&painter, font);
-        editor_draw_text(&painter, editor);
+        editor_draw_text(&painter, editor0, editor0->rect);
+        editor_draw_text(&painter, editor1, editor1->rect);
 
         window_surface = SDL_GetWindowSurface(window);
         SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer->pixels,
@@ -215,13 +233,22 @@ int main(void) {
       event.window.event = SDL_WINDOWEVENT_EXPOSED;
       assert(SDL_PushEvent(&event) == 1);
 
+    } else if(e.type == SDL_MOUSEBUTTONDOWN) {
+      if(e.button.button == SDL_BUTTON_LEFT) {
+        if(rect_contains(editor0->rect, e.button.x, e.button.y)) {
+          editor = editor0;
+        } else if(rect_contains(editor1->rect, e.button.x, e.button.y)) {
+          editor = editor1;
+        }
+      }
     } else if(e.type == SDL_QUIT) {
       printf("Quitting application\n");
       break;
     }
   }
 
-  editor_destroy(editor);
+  editor_destroy(editor0);
+  editor_destroy(editor1);
   backbuffer_destroy(backbuffer);
   font_destroy(font);
 

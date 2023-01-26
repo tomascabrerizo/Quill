@@ -33,6 +33,7 @@ typedef struct Rect {
 } Rect;
 
 Rect rect_create(i32 l, i32 r, i32 t, i32 b);
+bool rect_contains(Rect rect, i32 x, i32 y);
 bool rect_is_valid(Rect rect);
 Rect rect_intersection(Rect a, Rect b);
 Rect rect_union(Rect a, Rect b);
@@ -251,6 +252,8 @@ typedef struct Editor {
   bool selected;
   Cursor selection_mark;
 
+  Rect rect;
+
 } Editor;
 
 Editor *editor_create();
@@ -264,7 +267,7 @@ void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
 void editor_cursor_remove_right(Editor *editor);
 void editor_remove_selection(Editor *editor);
-void editor_draw_text(Painter *painter, Editor *editor);
+void editor_draw_text(Painter *painter, Editor *editor, Rect dst);
 void editor_update_selected(Editor *editor, bool selected);
 bool editor_is_selected(Editor *editor, u32 line, u32 col);
 

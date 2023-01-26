@@ -12,6 +12,10 @@ Rect rect_create(i32 l, i32 r, i32 t, i32 b) {
   return rect;
 }
 
+bool rect_contains(Rect rect, i32 x, i32 y) {
+  return x >= rect.l && x < rect.r && y >= rect.t && y < rect.b;
+}
+
 bool rect_is_valid(Rect rect) {
   return rect.r > rect.l && rect.b > rect.t;
 }
@@ -390,11 +394,24 @@ void editor_step_cursor_right(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line <= file_line_count(file));
-  if(cursor->col < line_size(file_get_line_at(file, cursor->line))) {
+  Line *line = file_get_line_at(file, cursor->line);
+  if(cursor->col < line_size(line)) {
+
+    u32 editor_width = editor->rect.r - editor->rect.l;
+    u32 total_codepoints_view = editor_width / platform.font->advance;
+    if(line_size(line) > total_codepoints_view) {
+      u32 one_pass_last_view_codepoint = MIN(editor->col_offset + total_codepoints_view, line_size(line));
+      if(cursor->col == (one_pass_last_view_codepoint - 1)) {
+        editor->col_offset++;
+      }
+    }
+
     cursor->col++;
+
   } else if(cursor->line < (file_line_count(file) - 1)) {
     editor_step_cursor_down(editor);
     cursor->col = 0;
+    editor->col_offset = 0;
   }
   cursor->save_col = cursor->col;
 }
@@ -403,6 +420,10 @@ void editor_step_cursor_left(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   if(cursor->col > 0) {
+    if(cursor->col == editor->col_offset) {
+      editor->col_offset--;
+    }
+
     cursor->col--;
   } else if(cursor->line > 0) {
     editor_step_cursor_up(editor);
@@ -430,10 +451,10 @@ void editor_step_cursor_down(Editor *editor) {
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
   if(cursor->line < (file_line_count(file) - 1)) {
-
-    u32 total_lines_view = platform.window_height / platform.font->line_gap;
+    u32 editor_height = editor->rect.b - editor->rect.t;
+    u32 total_lines_view = editor_height / platform.font->line_gap;
     u32 one_pass_last_view_line = MIN(editor->line_offset + total_lines_view, file_line_count(file));
-    if(cursor->line == one_pass_last_view_line - 1) {
+    if(cursor->line == (one_pass_last_view_line - 1)) {
       editor->line_offset++;
     }
 
@@ -607,15 +628,20 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
 }
 
 
-void editor_draw_text(Painter *painter, Editor *editor) {
+void editor_draw_text(Painter *painter, Editor *editor, Rect dst) {
+  editor->rect = dst;
+
+  Rect old_clipping = painter->clipping;
+  painter->clipping = editor->rect;
+
   File *file = editor->file;
   assert(file);
 
   /* TODO: Save start_x and start_y into the editor to offset calculation or do something better */
-  i32 start_x = 0;
-  i32 start_y = 0;
+  i32 start_x = dst.l;
+  i32 start_y = dst.t;
 
-  u32 total_lines_to_render = platform.window_height / platform.font->line_gap;
+  u32 total_lines_to_render = (platform.window_height - start_y) / platform.font->line_gap;
   u32 max_lines_to_render = MIN(editor->line_offset + total_lines_to_render, file_line_count(file));
 
   i32 pen_x = start_x;
@@ -649,4 +675,6 @@ void editor_draw_text(Painter *painter, Editor *editor) {
   i32 b = t + painter->font->line_gap;
   Rect cursor_rect = rect_create(l, r, t, b);
   painter_draw_rect(painter, cursor_rect, 0xff00ff);
+
+  painter->clipping = old_clipping;
 }
