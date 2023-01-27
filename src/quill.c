@@ -48,7 +48,9 @@ BackBuffer *backbuffer_create(i32 w, i32 h, u32 bytes_per_pixel) {
   backbuffer->w = w;
   backbuffer->h = h;
   backbuffer->bytes_per_pixel = bytes_per_pixel;
+  backbuffer->last_update_region = rect_create(0, w, 0, h);
   backbuffer->update_region = rect_create(0, w, 0, h);
+  backbuffer->debug_update_region = backbuffer->update_region;
   backbuffer->pixels = (u32 *)malloc(w * h * bytes_per_pixel);
   return backbuffer;
 }
@@ -61,8 +63,14 @@ void backbuffer_destroy(BackBuffer *backbuffer) {
 void backbuffer_resize(BackBuffer *backbuffer, i32 w, i32 h) {
   backbuffer->w = w;
   backbuffer->h = h;
-  backbuffer->update_region = rect_create(0, w, 0, h);
+  backbuffer_set_update_region(backbuffer, rect_create(0, w, 0, h));
+  backbuffer->debug_update_region = backbuffer->update_region;
   backbuffer->pixels = (u32 *)realloc(backbuffer->pixels, w * h * backbuffer->bytes_per_pixel);
+}
+
+void backbuffer_set_update_region(BackBuffer *backbuffer, Rect rect) {
+  backbuffer->last_update_region = backbuffer->update_region;
+  backbuffer->update_region = rect;
 }
 
 Painter painter_create(BackBuffer *backbuffer) {
@@ -82,11 +90,31 @@ void painter_set_font(Painter *painter, Font *font) {
 
 void painter_draw_rect(Painter *painter, Rect rect, u32 color) {
   rect = rect_intersection(rect, painter->clipping);
+  if(!rect_is_valid(rect)) {
+    return;
+  }
   for(i32 yy = rect.t; yy < rect.b; ++yy) {
     for(i32 xx = rect.l; xx < rect.r; ++xx) {
       painter->pixels[yy*painter->w+xx] = color;
     }
   }
+}
+
+void painter_draw_rect_outline(Painter *painter, Rect rect, u32 color) {
+  rect = rect_intersection(rect, painter->clipping);
+  if(!rect_is_valid(rect)) {
+    return;
+  }
+  u32 outline = 1;
+  Rect t = rect_create(rect.l, rect.r, rect.t, rect.t + outline);
+  Rect b = rect_create(rect.l, rect.r, rect.b - outline, rect.b);
+  Rect l = rect_create(rect.l, rect.l + outline, rect.t, rect.b);
+  Rect r = rect_create(rect.r - outline, rect.r, rect.t, rect.b);
+  painter_draw_rect(painter, t, color);
+  painter_draw_rect(painter, b, color);
+  painter_draw_rect(painter, l, color);
+  painter_draw_rect(painter, r, color);
+
 }
 
 void painter_draw_glyph(Painter *painter, Glyph *glyph, i32 x, i32 y, u32 color) {
@@ -95,6 +123,10 @@ void painter_draw_glyph(Painter *painter, Glyph *glyph, i32 x, i32 y, u32 color)
 
   Rect rect = rect_create(x, x + glyph->w, y, y + glyph->h);
   rect = rect_intersection(rect, painter->clipping);
+  if(!rect_is_valid(rect)) {
+    return;
+  }
+
   u32 *pixels_row = painter->pixels + rect.t * painter->w + rect.l;
   u8 *bytes_row = glyph->pixels + (rect.t - y) * glyph->w + (rect.l - x);
   for(i32 yy = rect.t; yy < rect.b; ++yy) {
@@ -289,6 +321,7 @@ File *file_load_from_existing_file(u8 *filename) {
 
   ByteArray buffer = load_entire_file(filename);
   File *file = file_create();
+  file->name = filename;
   if(buffer.size > 0) {
     file_insert_new_line(file);
 
@@ -450,6 +483,7 @@ void editor_step_cursor_down(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
+
   if(cursor->line < (file_line_count(file) - 1)) {
     u32 editor_height = editor->rect.b - editor->rect.t;
     u32 total_lines_view = editor_height / platform.font->line_gap;
@@ -628,20 +662,21 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
 }
 
 
-void editor_draw_text(Painter *painter, Editor *editor, Rect dst) {
-  editor->rect = dst;
+void editor_draw_text(Painter *painter, Editor *editor) {
+  editor->redraw = false;
 
   Rect old_clipping = painter->clipping;
-  painter->clipping = editor->rect;
+  painter->clipping = rect_intersection(painter->clipping, editor->rect);
+
+  painter_draw_rect(painter, editor->rect, 0x202020);
 
   File *file = editor->file;
   assert(file);
 
-  /* TODO: Save start_x and start_y into the editor to offset calculation or do something better */
-  i32 start_x = dst.l;
-  i32 start_y = dst.t;
+  i32 start_x = editor->rect.l;
+  i32 start_y = editor->rect.t;
 
-  u32 total_lines_to_render = (platform.window_height - start_y) / platform.font->line_gap;
+  u32 total_lines_to_render = ((editor->rect.b - editor->rect.t) - start_y) / platform.font->line_gap;
   u32 max_lines_to_render = MIN(editor->line_offset + total_lines_to_render, file_line_count(file));
 
   i32 pen_x = start_x;
@@ -678,3 +713,19 @@ void editor_draw_text(Painter *painter, Editor *editor, Rect dst) {
 
   painter->clipping = old_clipping;
 }
+
+static inline Rect editor_lines_rect(Editor *editor) {
+  Font *font = platform.font;
+  Rect rect = editor->rect;
+  rect.t = editor->redraw_line_start * font->line_gap - font->descender;
+  rect.b = (editor->redraw_line_end + 1) * font->line_gap - font->descender;
+  return rect;
+}
+
+void editor_redraw_lines(Editor *editor, u32 start, u32 end) {
+  (void)start; (void)end;
+  editor->redraw = true;
+  //editor->redraw_line_start = start;
+  //editor->redraw_line_end = end;
+}
+

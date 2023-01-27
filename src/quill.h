@@ -50,12 +50,15 @@ typedef struct BackBuffer {
   u32 *pixels;
   i32 w, h;
   Rect update_region;
+  Rect last_update_region;
+  Rect debug_update_region;
   u32 bytes_per_pixel;
 } BackBuffer;
 
 BackBuffer *backbuffer_create(i32 w, i32 h, u32 bytes_per_pixel);
 void backbuffer_destroy(BackBuffer *backbuffer);
 void backbuffer_resize(BackBuffer *backbuffer, i32 w, i32 h);
+void backbuffer_set_update_region(BackBuffer *backbuffer, Rect rect);
 
 typedef struct Glyph {
   u8 *pixels;
@@ -88,6 +91,7 @@ typedef struct Painter {
 Painter painter_create(BackBuffer *backbuffer);
 void painter_set_font(Painter *painter, Font *font);
 void painter_draw_rect(Painter *painter, Rect rect, u32 color);
+void painter_draw_rect_outline(Painter *painter, Rect rect, u32 color);
 void painter_draw_glyph(Painter *painter, Glyph *glyph, i32 x, i32 y, u32 color);
 void painter_draw_text(Painter *painter, u8 *text, u32 size, i32 x, i32 y, u32 color);
 
@@ -215,7 +219,7 @@ u32 line_size(Line *line);
 
 typedef struct File {
   Line **buffer;
-
+  u8 *name;
   /* NOTE: Line freelist */
   Line *line_first_free;
 } File;
@@ -253,7 +257,9 @@ typedef struct Editor {
   Cursor selection_mark;
 
   Rect rect;
-
+  bool redraw;
+  u32 redraw_line_start;
+  u32 redraw_line_end;
 } Editor;
 
 Editor *editor_create();
@@ -267,13 +273,13 @@ void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
 void editor_cursor_remove_right(Editor *editor);
 void editor_remove_selection(Editor *editor);
-void editor_draw_text(Painter *painter, Editor *editor, Rect dst);
 void editor_update_selected(Editor *editor, bool selected);
 bool editor_is_selected(Editor *editor, u32 line, u32 col);
+void editor_draw_text(Painter *painter, Editor *editor);
+void editor_redraw_lines(Editor *editor, u32 start, u32 end);
 
 typedef struct Platform {
-  u32 window_width;
-  u32 window_height;
+  BackBuffer *backbuffer;
   u32 mouse_pos_x;
   u32 mouse_pos_y;
   Font *font;
