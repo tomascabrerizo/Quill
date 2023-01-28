@@ -2,7 +2,12 @@
 #define _QUILL_H_
 
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
 
+/* TODO: Create quill_types.h and quill_data_structures.h */
 typedef uint64_t u64;
 typedef uint32_t u32;
 typedef uint16_t u16;
@@ -139,7 +144,7 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
 #define gapbuffer_remove(buffer) (gapbuffer_f_index((buffer)) > 0 ? \
   gapbuffer_header((buffer))->f_index-- : 0)
 
-#define gapbuffer_free(buffer) (free(gapbuffer_header((buffer))))
+#define gapbuffer_free(buffer) ((buffer != 0) ? (free(gapbuffer_header((buffer)))) : 0)
 
 #define gapbuffer_get_at_gap(buffer) ((buffer)[gapbuffer_f_index((buffer))-1])
 
@@ -196,87 +201,6 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
   printf("\n"); \
   } while(0)
 
-/* TODO: Handle unicode characters */
-typedef struct Line {
-  u8 *buffer; /* NOTE: Dynamic gap buffer of characters */
-
-  /* NOTE: Node to handle file freelist of lines */
-  struct Line *next;
-} Line;
-
-Line *line_create(void);
-void line_destroy(Line *line);
-void line_reset(Line *line);
-void line_insert(Line *line, u8 codepoint);
-void line_insert_at_index(Line *line, u32 index, u8 codepoint);
-void line_remove(Line *line);
-void line_remove_at_index(Line *line, u32 index);
-void line_remove_from_front_up_to(Line *line, u32 index);
-void line_copy(Line *des, Line *src, u32 count);
-void line_copy_at(Line *des, Line *src, u32 count, u32 index);
-u8 line_get_codepoint_at(Line *line, u32 index);
-u32 line_size(Line *line);
-
-typedef struct File {
-  Line **buffer;
-  u8 *name;
-  /* NOTE: Line freelist */
-  Line *line_first_free;
-} File;
-
-File *file_create();
-void file_destroy(File *file);
-
-Line *file_line_create(File *file);
-void file_line_free(File *file, Line *line);
-
-File *file_load_from_existing_file(u8 *filename);
-void file_insert_new_line(File *file);
-void file_insert_new_line_at(File *file, u32 index);
-void file_remove_line(File *file);
-void file_remove_line_at(File *file, u32 index);
-void file_print(File *file);
-Line *file_get_line_at(File *file, u32 index);
-u32 file_line_count(File *file);
-
-typedef struct Cursor {
-  u32 col;
-  u32 save_col;
-  u32 line;
-} Cursor;
-
-void cursor_print(Cursor cursor);
-
-typedef struct Editor {
-  File *file;
-  Cursor cursor;
-  u32 col_offset;
-  u32 line_offset;
-
-  bool selected;
-  Cursor selection_mark;
-
-  Rect rect;
-  bool redraw;
-  u32 redraw_line_start;
-  u32 redraw_line_end;
-} Editor;
-
-Editor *editor_create();
-void editor_destroy(Editor *editor);
-void editor_step_cursor_right(Editor *editor);
-void editor_step_cursor_left(Editor *editor);
-void editor_step_cursor_up(Editor *editor);
-void editor_step_cursor_down(Editor *editor);
-void editor_cursor_insert(Editor *editor, u8 codepoint);
-void editor_cursor_insert_new_line(Editor *editor);
-void editor_cursor_remove(Editor *editor);
-void editor_cursor_remove_right(Editor *editor);
-void editor_remove_selection(Editor *editor);
-void editor_update_selected(Editor *editor, bool selected);
-bool editor_is_selected(Editor *editor, u32 line, u32 col);
-void editor_draw_text(Painter *painter, Editor *editor);
-void editor_redraw_lines(Editor *editor, u32 start, u32 end);
 
 typedef struct Platform {
   BackBuffer *backbuffer;

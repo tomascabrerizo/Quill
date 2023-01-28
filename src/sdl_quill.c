@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "quill_file.h"
+#include "quill_editor.h"
+
 #define QUILL_PLATFORM
-#include "quill.h"
 
 /* NOTE: Platform helper functions */
 static bool freetype_is_initialize;
@@ -138,11 +140,11 @@ int main(void) {
 
   platform.backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
 
-  Editor *editor0 = editor_create();
-  editor0->file = file_load_from_existing_file((u8 *)"./src/quill.c");
+  Editor *editor0 = editor_create(0);
+  editor0->file = file_load_from_existing_file((Element *)editor0, (u8 *)"./src/quill.c");
 
-  Editor *editor1 = editor_create();
-  editor1->file = file_load_from_existing_file((u8 *)"./src/quill.h");
+  Editor *editor1 = editor_create(0);
+  editor1->file = file_load_from_existing_file((Element *)editor1, (u8 *)"./src/quill.h");
 
   Editor *editor = editor1;
   SDL_SetWindowTitle(window, (const char *)editor->file->name);
@@ -188,11 +190,6 @@ int main(void) {
         painter_draw_rect_outline(&painter, backbuffer->last_update_region, 0x202020);
         painter_draw_rect_outline(&painter, backbuffer->update_region, 0x00ff00);
         painter.clipping = old_clipping;
-
-        //printf("---------------------------------\n");
-        //rect_print(backbuffer->debug_update_region);
-        //rect_print(backbuffer->last_update_region);
-        //rect_print(backbuffer->update_region);
 
         window_surface = SDL_GetWindowSurface(window);
         SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer->pixels,
@@ -281,8 +278,8 @@ int main(void) {
     }
   }
 
-  editor_destroy(editor0);
-  editor_destroy(editor1);
+  element_destroy((Element *)editor0);
+  element_destroy((Element *)editor1);
   backbuffer_destroy(platform.backbuffer);
   font_destroy(font);
 
