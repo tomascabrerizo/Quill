@@ -6,6 +6,7 @@ extern Platform platform;
 static int application_default_message_handler(struct Element *element, Message message, void *data) {
   /* TODO: Implements default line message handler */
   (void)element; (void)message; (void)data;
+  Application *application = (Application *)element;
 
   switch(message) {
   case MESSAGE_DRAW: {
@@ -31,7 +32,7 @@ static int application_default_message_handler(struct Element *element, Message 
 
   } break;
   case MESSAGE_KEYDOWN: {
-
+    element_message(application->current_editor, message, data);
   } break;
   case MESSAGE_KEYUP: {
 
@@ -52,10 +53,3 @@ void application_set_current_editor(Application *application, Editor *editor) {
   application->current_editor = editor;
 }
 
-void application_update(Application *application) {
-  Painter painter = painter_create(application->element.backbuffer);
-  painter.font = platform.font;
-  element_draw(application, &painter);
-  platform_end_draw(application->element.backbuffer);
-  application->element.backbuffer->update_region = rect_create(0, 0, 0, 0);
-}

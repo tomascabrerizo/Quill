@@ -13,6 +13,5 @@ typedef struct Application {
 
 Application *application_create(BackBuffer *backbuffer);
 void application_set_current_editor(Application *application, struct Editor *editor);
-void application_update(Application *application);
 
 #endif /* _QUILL_APPLICATION_H_ */

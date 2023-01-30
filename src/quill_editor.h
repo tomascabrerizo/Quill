@@ -14,6 +14,17 @@ typedef struct Cursor {
 
 void cursor_print(Cursor cursor);
 
+/* TODO: Get good keycodes for the editor keys */
+
+#define EDITOR_MOD_SHIFT_RIGHT 0x80000000;
+#define EDITOR_MOD_SHIFT_LEFT 0xc0000000;
+#define EDITOR_MOD_SHIFT (EDITOR_MOD_SHIFT_RIGHT|EDITOR_MOD_SHIFT_LEFT)
+
+#define EDITOR_KEY_RIGHT 0
+#define EDITOR_KEY_LEFT 1
+#define EDITOR_KEY_UP 2
+#define EDITOR_KEY_DOWN 3
+
 typedef struct Editor {
   QUILL_ELEMENT
 

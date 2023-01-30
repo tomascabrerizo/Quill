@@ -10,7 +10,7 @@ typedef enum Message {
   MESSAGE_DRAW,
   MESSAGE_KEYDOWN,
   MESSAGE_KEYUP
-} Message;
+  } Message;
 
 struct Element;
 typedef i32 (*MessageHandler)(struct Element *element, Message message, void *data);
@@ -50,13 +50,14 @@ void element_set_backbuffer(Element *element, BackBuffer *backbuffer);
 #define element_message(e, message, data) _element_message(&(e)->element, (message), (data))
 #define element_draw(e, painter) _element_draw(&(e)->element, (painter))
 #define element_resize(e, rect) _element_resize(&(e)->element, (rect))
-#define element_redraw(e, rect_ptr) _element_redraw(&(e)->element, (rect))
+#define element_redraw(e, rect_ptr) _element_redraw(&(e)->element, (rect_ptr))
+#define element_update(e) _element_update(&(e)->element)
 
 i32 _element_message(Element *element, Message message, void *data);
 void _element_draw(Element *element, Painter *painter);
 void _element_resize(Element *element, Rect rect);
 void _element_redraw(Element *element, Rect *rect);
-
+void _element_update(Element *element);
 
 #define QUILL_ELEMENT Element element;
 

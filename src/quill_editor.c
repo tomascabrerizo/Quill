@@ -23,6 +23,24 @@ static int editor_default_message_handler(struct Element *element, Message messa
 
   } break;
   case MESSAGE_KEYDOWN: {
+    u32 key = (u32)((u64)data);
+    switch(key) {
+    case EDITOR_KEY_LEFT: {
+      editor_step_cursor_left(editor);
+    } break;
+    case EDITOR_KEY_RIGHT: {
+      editor_step_cursor_right(editor);
+    } break;
+    case EDITOR_KEY_UP: {
+      editor_step_cursor_up(editor);
+    } break;
+    case EDITOR_KEY_DOWN: {
+      editor_step_cursor_down(editor);
+    } break;
+    }
+
+    element_redraw(editor, &element->rect);
+    element_update(editor);
 
   } break;
   case MESSAGE_KEYUP: {
@@ -285,7 +303,7 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
 
 void editor_draw_text(Painter *painter, Editor *editor) {
 
-  //painter_draw_rect(painter, editor->rect, 0x202020);
+  painter_draw_rect(painter, editor->element.rect, 0x202020);
 
   File *file = editor->file;
   assert(file);

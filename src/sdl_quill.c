@@ -181,13 +181,13 @@ int main(void) {
       if(e.window.event == SDL_WINDOWEVENT_SHOWN) {
         Rect backbuffer_rect = rect_create(0, backbuffer->w, 0, backbuffer->h);
         element_resize(application, backbuffer_rect);
-        application_update(application);
+        element_update(application);
 
       } else if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
         backbuffer_resize(backbuffer, e.window.data1, e.window.data2);
         Rect backbuffer_rect = rect_create(0, backbuffer->w, 0, backbuffer->h);
         element_resize(application, backbuffer_rect);
-        application_update(application);
+        element_update(application);
 
       } else if(e.window.event == SDL_WINDOWEVENT_EXPOSED) {
         platform_end_draw(platform.backbuffer);
@@ -206,13 +206,13 @@ int main(void) {
       }
 
       if(e.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
-        editor_step_cursor_right(editor);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RIGHT);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_LEFT) {
-        editor_step_cursor_left(editor);
+        element_message(application, MESSAGE_KEYDOWN, (void *)EDITOR_KEY_LEFT);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_UP) {
-        editor_step_cursor_up(editor);
+        element_message(application, MESSAGE_KEYDOWN, (void *)EDITOR_KEY_UP);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
-        editor_step_cursor_down(editor);
+        element_message(application, MESSAGE_KEYDOWN, (void *)EDITOR_KEY_DOWN);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE) {
         editor_cursor_remove(editor);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DELETE) {

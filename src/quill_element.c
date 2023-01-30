@@ -1,4 +1,5 @@
 #include "quill_element.h"
+extern Platform platform;
 
 static void default_element_destroy(Element *element) {
   free(element);
@@ -106,10 +107,8 @@ void _element_draw(Element *element, Painter *painter) {
 
   Element *child = element->first_child;
   while(child) {
-
-    Rect old_clip = painter->clipping;
+    painter->clipping = clip;
     _element_draw(child, painter);
-    painter->clipping = old_clip;
 
     child = child->next;
   }
@@ -141,6 +140,14 @@ void _element_redraw(Element *element, Rect *rect) {
       element->backbuffer->update_region = r;
     }
   }
+}
+
+void _element_update(Element *element) {
+  Painter painter = painter_create(element->backbuffer);
+  painter.font = platform.font;
+  _element_draw(element, &painter);
+  platform_end_draw(element->backbuffer);
+  element->backbuffer->update_region = rect_create(0, 0, 0, 0);
 }
 
 
