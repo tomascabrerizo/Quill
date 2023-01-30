@@ -10,6 +10,11 @@ static inline u32 editor_line_to_screen_pos(Editor *editor, u32 line_pos) {
   return editor->file_rect.t + (line_pos * line_height) + line_height;
 }
 
+static inline u32 editor_col_to_screen_pos(Editor *editor, u32 col_pos) {
+  u32 advance = platform.font->advance;
+  return editor->file_rect.l + (col_pos * advance);
+}
+
 static inline u32 editor_screen_to_line_pos(Editor *editor, u32 screen_pos) {
   u32 line_height = platform.font->line_gap;
   return (screen_pos - editor->file_rect.t) / line_height;
@@ -19,6 +24,14 @@ static inline u32 editor_max_visible_lines(Editor *editor) {
   u32 line_height = platform.font->line_gap;
   u32 file_editor_height = (editor->file_rect.b - editor->file_rect.t);
   return file_editor_height / line_height;
+}
+
+static inline u32 editor_cursor_line_to_editor_visible_line(Editor *editor) {
+  return editor->cursor.line - editor->line_offset;
+}
+
+static inline u32 editor_cursor_col_to_editor_visible_col(Editor *editor) {
+  return editor->cursor.col - editor->col_offset;
 }
 
 void cursor_print(Cursor cursor) {
@@ -32,7 +45,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
   switch(message) {
   case MESSAGE_DRAW: {
     Painter *painter = (Painter *)data;
-    editor_draw_lines(painter, editor, 0, editor_max_visible_lines(editor), 0);
+    editor_draw_lines(painter, editor, editor->cursor.line, editor_max_visible_lines(editor), editor->cursor.line);
     /* TODO: draw editor cursor */
   } break;
   case MESSAGE_RESIZE: {
@@ -43,6 +56,8 @@ static int editor_default_message_handler(struct Element *element, Message messa
     switch(key) {
     case EDITOR_KEY_LEFT: {
       editor_step_cursor_left(editor);
+      //editor_draw_lines(painter, editor, editor->cursor.line, editor->cursor.line,
+      //                  editor_cursor_line_to_editor_visible_line(editor));
     } break;
     case EDITOR_KEY_RIGHT: {
       editor_step_cursor_right(editor);
@@ -55,6 +70,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
     } break;
     }
 
+    //editor_draw_cursor(painter, editor);
     element_redraw(editor, 0);
     element_update(editor);
 
@@ -324,6 +340,16 @@ void editor_draw_lines(Painter *painter, Editor *editor, u32 start, u32 end, u32
   }
 }
 
+void editor_draw_cursor(struct Painter *painter, Editor *editor) {
+  i32 line = editor_line_to_screen_pos(editor, editor_cursor_line_to_editor_visible_line(editor));
+  i32 col = editor_col_to_screen_pos(editor, editor_cursor_col_to_editor_visible_col(editor));
+  i32 l = col;
+  i32 r = col + 2;
+  i32 t = line - platform.font->line_gap;
+  i32 b = line;
+  Rect cursor_rect = rect_create(l, r, t, b);
+  painter_draw_rect(painter, cursor_rect, 0xff00ff);
+}
 
 void editor_draw_text(Painter *painter, Editor *editor) {
 

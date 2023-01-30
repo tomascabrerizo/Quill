@@ -53,6 +53,7 @@ void editor_remove_selection(Editor *editor);
 void editor_update_selected(Editor *editor, bool selected);
 bool editor_is_selected(Editor *editor, u32 line, u32 col);
 void editor_draw_lines(struct Painter *painter, Editor *editor, u32 start, u32 end, u32 editor_line_pos);
+void editor_draw_cursor(struct Painter *painter, Editor *editor);
 void editor_draw_text(struct Painter *painter, Editor *editor);
 
 
