@@ -1,4 +1,5 @@
 #include "quill_element.h"
+#include "quill_painter.h"
 extern Platform platform;
 
 static void default_element_destroy(Element *element) {

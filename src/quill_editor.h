@@ -4,9 +4,9 @@
 #include "quill.h"
 #include "quill_element.h"
 
-typedef struct Cursor {
-  QUILL_ELEMENT
+struct Painter;
 
+typedef struct Cursor {
   u32 col;
   u32 save_col;
   u32 line;
@@ -29,6 +29,8 @@ typedef struct Editor {
   QUILL_ELEMENT
 
   struct File *file;
+
+  Rect file_rect;
   Cursor cursor;
   u32 col_offset;
   u32 line_offset;
@@ -50,8 +52,8 @@ void editor_cursor_remove_right(Editor *editor);
 void editor_remove_selection(Editor *editor);
 void editor_update_selected(Editor *editor, bool selected);
 bool editor_is_selected(Editor *editor, u32 line, u32 col);
-void editor_draw_text(Painter *painter, Editor *editor);
-void editor_redraw_lines(Editor *editor, u32 start, u32 end);
+void editor_draw_lines(struct Painter *painter, Editor *editor, u32 start, u32 end, u32 editor_line_pos);
+void editor_draw_text(struct Painter *painter, Editor *editor);
 
 
 #endif /* _QUILL_EDITOR_H_ */

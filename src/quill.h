@@ -84,20 +84,6 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size);
 QUILL_PLATFORM_API void font_destroy(Font *font);
 Glyph *font_get_glyph(u16 codepoint);
 
-typedef struct Painter {
-  u32 *pixels;
-  i32 w, h;
-  Rect clipping;
-  Font *font;
-} Painter;
-
-Painter painter_create(BackBuffer *backbuffer);
-void painter_set_font(Painter *painter, Font *font);
-void painter_draw_rect(Painter *painter, Rect rect, u32 color);
-void painter_draw_rect_outline(Painter *painter, Rect rect, u32 color);
-void painter_draw_glyph(Painter *painter, Glyph *glyph, i32 x, i32 y, u32 color);
-void painter_draw_text(Painter *painter, u8 *text, u32 size, i32 x, i32 y, u32 color);
-
 #define GAPBUFFER_OBJECT \
   u8 *data; \
   u32 size; \

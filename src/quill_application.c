@@ -1,5 +1,6 @@
 #include "quill_application.h"
 #include "quill_editor.h"
+#include "quill_painter.h"
 
 extern Platform platform;
 

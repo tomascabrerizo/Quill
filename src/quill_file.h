@@ -2,11 +2,8 @@
 #define _QUILL_FILE_H_
 
 #include "quill.h"
-#include "quill_element.h"
 
 typedef struct File {
-  QUILL_ELEMENT
-
   u8 *name;
   struct Line **buffer;
   struct Line *line_first_free;

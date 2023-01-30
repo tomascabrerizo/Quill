@@ -1,8 +1,25 @@
 #include "quill_editor.h"
 #include "quill_line.h"
 #include "quill_file.h"
+#include "quill_painter.h"
 
 extern Platform platform;
+
+static inline u32 editor_line_to_screen_pos(Editor *editor, u32 line_pos) {
+  u32 line_height = platform.font->line_gap;
+  return editor->file_rect.t + (line_pos * line_height) + line_height;
+}
+
+static inline u32 editor_screen_to_line_pos(Editor *editor, u32 screen_pos) {
+  u32 line_height = platform.font->line_gap;
+  return (screen_pos - editor->file_rect.t) / line_height;
+}
+
+static inline u32 editor_max_visible_lines(Editor *editor) {
+  u32 line_height = platform.font->line_gap;
+  u32 file_editor_height = (editor->file_rect.b - editor->file_rect.t);
+  return file_editor_height / line_height;
+}
 
 void cursor_print(Cursor cursor) {
   printf("line:%d, col:%d\n", cursor.line, cursor.col);
@@ -10,17 +27,16 @@ void cursor_print(Cursor cursor) {
 
 
 static int editor_default_message_handler(struct Element *element, Message message, void *data) {
-  /* TODO: Implements default line message handler */
-  (void)element; (void)message; (void)data;
   Editor *editor = (Editor *)element;
 
   switch(message) {
   case MESSAGE_DRAW: {
     Painter *painter = (Painter *)data;
-    editor_draw_text(painter, editor);
+    editor_draw_lines(painter, editor, 0, editor_max_visible_lines(editor), 0);
+    /* TODO: draw editor cursor */
   } break;
   case MESSAGE_RESIZE: {
-
+    editor->file_rect = element_get_rect(editor);
   } break;
   case MESSAGE_KEYDOWN: {
     u32 key = (u32)((u64)data);
@@ -39,7 +55,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
     } break;
     }
 
-    element_redraw(editor, &element->rect);
+    element_redraw(editor, 0);
     element_update(editor);
 
   } break;
@@ -78,9 +94,7 @@ void editor_step_cursor_right(Editor *editor) {
         editor->col_offset++;
       }
     }
-
     cursor->col++;
-
   } else if(cursor->line < (file_line_count(file) - 1)) {
     editor_step_cursor_down(editor);
     cursor->col = 0;
@@ -298,6 +312,16 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
     return false;
   }
   return false;
+}
+
+void editor_draw_lines(Painter *painter, Editor *editor, u32 start, u32 end, u32 editor_line_pos) {
+  File *file = editor->file;
+  for(u32 i = start; i <= end; ++i) {
+    u32 screen_x = editor->file_rect.l;
+    u32 screen_y = editor_line_to_screen_pos(editor, editor_line_pos++);
+    Line *line = file_get_line_at(file, i);
+    painter_draw_line(painter, line, screen_x, screen_y, 0xd0d0d0);
+  }
 }
 
 

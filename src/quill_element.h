@@ -3,8 +3,6 @@
 
 #include "quill.h"
 
-/* TODO: Maybe Message should be a discriminated union */
-
 typedef enum Message {
   MESSAGE_RESIZE,
   MESSAGE_DRAW,
@@ -15,6 +13,8 @@ typedef enum Message {
 struct Element;
 typedef i32 (*MessageHandler)(struct Element *element, Message message, void *data);
 typedef void (*ElementDestroy)(struct Element *element);
+
+struct Painter;
 
 typedef struct Element {
   Rect rect, clip;
@@ -37,6 +37,7 @@ Element *element_create(u64 size, Element *parent, MessageHandler default_messge
 #define element_destroy(e) _element_destroy(&((e)->element))
 void _element_destroy(Element *element);
 
+#define element_get_rect(e) ((e)->element.rect)
 #define element_get_width(e) _element_get_width(&(e)->element)
 #define element_get_height(e) _element_get_height(&(e)->element)
 u32 _element_get_width(Element *element);
@@ -54,7 +55,7 @@ void element_set_backbuffer(Element *element, BackBuffer *backbuffer);
 #define element_update(e) _element_update(&(e)->element)
 
 i32 _element_message(Element *element, Message message, void *data);
-void _element_draw(Element *element, Painter *painter);
+void _element_draw(Element *element, struct Painter *painter);
 void _element_resize(Element *element, Rect rect);
 void _element_redraw(Element *element, Rect *rect);
 void _element_update(Element *element);
