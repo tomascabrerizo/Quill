@@ -25,10 +25,6 @@ typedef struct Editor {
   bool selected;
   Cursor selection_mark;
 
-  Rect rect;
-  bool redraw;
-  u32 redraw_line_start;
-  u32 redraw_line_end;
 } Editor;
 
 struct Editor *editor_create(Element *parent);

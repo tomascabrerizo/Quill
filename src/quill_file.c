@@ -3,23 +3,29 @@
 
 extern Platform platform;
 
-static int file_default_message_handler(struct Element *element, Message message, void *data) {
-  /* TODO: Implements default line message handler */
-  (void)element; (void)message; (void)data;
-  return 0;
+File *file_create(void) {
+  File *file = (File *)malloc(sizeof(File));
+  memset(file, 0, sizeof(File));
+  return file;
 }
 
-static void file_destroy(Element *element) {
-  File *file = (File *)element;
+inline static void file_free_all_lines(File * file) {
+  for(u32 i = 0; i < file_line_count(file); ++i) {
+    line_destroy(file_get_line_at(file, i));
+  }
+  Line *line = file->line_first_free;
+  while(line) {
+    Line *to_free = line;
+    line = line->next;
+    line_destroy(to_free);
+  }
+}
+
+void file_destroy(File *file) {
+  file_free_all_lines(file);
   gapbuffer_free(file->buffer);
 }
 
-File *file_create(Element *parent) {
-  File *file = (File *)element_create(sizeof(File), parent, file_default_message_handler);
-  element_set_user_element_destroy((Element *)file, file_destroy);
-  element_set_type((Element *)file, ELEMENT_FILE);
-  return file;
-}
 
 Line *file_line_create(File *file) {
   if(file->line_first_free) {
@@ -28,7 +34,7 @@ Line *file_line_create(File *file) {
     line_reset(line);
     return line;
   }
-  return line_create((Element *)file);
+  return line_create();
 }
 
 void file_line_free(File *file, Line *line) {
@@ -36,11 +42,11 @@ void file_line_free(File *file, Line *line) {
   file->line_first_free = line;
 }
 
-File *file_load_from_existing_file(Element *parent, u8 *filename) {
+File *file_load_from_existing_file(u8 *filename) {
   /* TODO: Maybe load the file with memcpy into the seconds gap */
 
   ByteArray buffer = load_entire_file(filename);
-  File *file = file_create(parent);
+  File *file = file_create();
   file->name = filename;
   if(buffer.size > 0) {
     file_insert_new_line(file);

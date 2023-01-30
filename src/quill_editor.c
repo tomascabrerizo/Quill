@@ -12,12 +12,37 @@ void cursor_print(Cursor cursor) {
 static int editor_default_message_handler(struct Element *element, Message message, void *data) {
   /* TODO: Implements default line message handler */
   (void)element; (void)message; (void)data;
+  Editor *editor = (Editor *)element;
+
+  switch(message) {
+  case MESSAGE_DRAW: {
+    Painter *painter = (Painter *)data;
+    editor_draw_text(painter, editor);
+  } break;
+  case MESSAGE_RESIZE: {
+
+  } break;
+  case MESSAGE_KEYDOWN: {
+
+  } break;
+  case MESSAGE_KEYUP: {
+
+  } break;
+  }
+
   return 0;
+}
+
+static void editor_user_element_destroy(Element *element) {
+  Editor *editor = (Editor *)element;
+  if(editor->file) {
+    file_destroy(editor->file);
+  }
 }
 
 Editor *editor_create(Element *parent) {
   Editor *editor = (Editor *)element_create(sizeof(Editor), parent, editor_default_message_handler);
-  element_set_type((Element *)editor, ELEMENT_EDITOR);
+  element_set_user_element_destroy(&editor->element, editor_user_element_destroy);
   return editor;
 }
 
@@ -28,9 +53,7 @@ void editor_step_cursor_right(Editor *editor) {
   assert(cursor->line <= file_line_count(file));
   Line *line = file_get_line_at(file, cursor->line);
   if(cursor->col < line_size(line)) {
-
-    u32 editor_width = editor->rect.r - editor->rect.l;
-    u32 total_codepoints_view = editor_width / platform.font->advance;
+    u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
     if(line_size(line) > total_codepoints_view) {
       u32 one_pass_last_view_codepoint = MIN(editor->col_offset + total_codepoints_view, line_size(line));
       if(cursor->col == (one_pass_last_view_codepoint - 1)) {
@@ -84,8 +107,7 @@ void editor_step_cursor_down(Editor *editor) {
   assert(cursor->line < file_line_count(file));
 
   if(cursor->line < (file_line_count(file) - 1)) {
-    u32 editor_height = editor->rect.b - editor->rect.t;
-    u32 total_lines_view = editor_height / platform.font->line_gap;
+    u32 total_lines_view = element_get_height(editor) / platform.font->line_gap;
     u32 one_pass_last_view_line = MIN(editor->line_offset + total_lines_view, file_line_count(file));
     if(cursor->line == (one_pass_last_view_line - 1)) {
       editor->line_offset++;
@@ -262,20 +284,16 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
 
 
 void editor_draw_text(Painter *painter, Editor *editor) {
-  editor->redraw = false;
 
-  Rect old_clipping = painter->clipping;
-  painter->clipping = rect_intersection(painter->clipping, editor->rect);
-
-  painter_draw_rect(painter, editor->rect, 0x202020);
+  //painter_draw_rect(painter, editor->rect, 0x202020);
 
   File *file = editor->file;
   assert(file);
 
-  i32 start_x = editor->rect.l;
-  i32 start_y = editor->rect.t;
+  i32 start_x = editor->element.rect.l;
+  i32 start_y = editor->element.rect.t;
 
-  u32 total_lines_to_render = ((editor->rect.b - editor->rect.t) - start_y) / platform.font->line_gap;
+  u32 total_lines_to_render = (element_get_height(editor) - start_y) / platform.font->line_gap;
   u32 max_lines_to_render = MIN(editor->line_offset + total_lines_to_render, file_line_count(file));
 
   i32 pen_x = start_x;
@@ -309,21 +327,4 @@ void editor_draw_text(Painter *painter, Editor *editor) {
   i32 b = t + painter->font->line_gap;
   Rect cursor_rect = rect_create(l, r, t, b);
   painter_draw_rect(painter, cursor_rect, 0xff00ff);
-
-  painter->clipping = old_clipping;
-}
-
-static inline Rect editor_lines_rect(Editor *editor) {
-  Font *font = platform.font;
-  Rect rect = editor->rect;
-  rect.t = editor->redraw_line_start * font->line_gap - font->descender;
-  rect.b = (editor->redraw_line_end + 1) * font->line_gap - font->descender;
-  return rect;
-}
-
-void editor_redraw_lines(Editor *editor, u32 start, u32 end) {
-  (void)start; (void)end;
-  editor->redraw = true;
-  //editor->redraw_line_start = start;
-  //editor->redraw_line_end = end;
 }

@@ -11,6 +11,10 @@ bool rect_contains(Rect rect, i32 x, i32 y) {
   return x >= rect.l && x < rect.r && y >= rect.t && y < rect.b;
 }
 
+bool rect_equals(Rect a, Rect b) {
+  return (a.l == b.l) && (a.r == b.r) && (a.t == b.t) && (a.b == b.b);
+}
+
 bool rect_is_valid(Rect rect) {
   return rect.r > rect.l && rect.b > rect.t;
 }
@@ -43,9 +47,7 @@ BackBuffer *backbuffer_create(i32 w, i32 h, u32 bytes_per_pixel) {
   backbuffer->w = w;
   backbuffer->h = h;
   backbuffer->bytes_per_pixel = bytes_per_pixel;
-  backbuffer->last_update_region = rect_create(0, w, 0, h);
   backbuffer->update_region = rect_create(0, w, 0, h);
-  backbuffer->debug_update_region = backbuffer->update_region;
   backbuffer->pixels = (u32 *)malloc(w * h * bytes_per_pixel);
   return backbuffer;
 }
@@ -58,14 +60,8 @@ void backbuffer_destroy(BackBuffer *backbuffer) {
 void backbuffer_resize(BackBuffer *backbuffer, i32 w, i32 h) {
   backbuffer->w = w;
   backbuffer->h = h;
-  backbuffer_set_update_region(backbuffer, rect_create(0, w, 0, h));
-  backbuffer->debug_update_region = backbuffer->update_region;
+  backbuffer->update_region = rect_create(0, w, 0, h);
   backbuffer->pixels = (u32 *)realloc(backbuffer->pixels, w * h * backbuffer->bytes_per_pixel);
-}
-
-void backbuffer_set_update_region(BackBuffer *backbuffer, Rect rect) {
-  backbuffer->last_update_region = backbuffer->update_region;
-  backbuffer->update_region = rect;
 }
 
 Painter painter_create(BackBuffer *backbuffer) {

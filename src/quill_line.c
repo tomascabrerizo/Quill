@@ -1,22 +1,16 @@
 #include "quill_line.h"
 extern Platform platform;
 
-static int line_default_message_handler(struct Element *element, Message message, void *data) {
-  /* TODO: Implements default line message handler */
-  (void)element; (void)message; (void)data;
-  return 0;
-}
+Line *line_create(void) {
+  Line *line = (Line *)malloc(sizeof(Line));
+  memset(line, 0, sizeof(Line));
 
-static void line_destroy(Element *element) {
-  Line *line = (Line *)element;
-  gapbuffer_free(line->buffer);
-}
-
-Line *line_create(struct Element *parent) {
-  Line *line = (Line *)element_create(sizeof(Line), parent, line_default_message_handler);
-  element_set_user_element_destroy((Element *)line, line_destroy);
-  element_set_type((Element *)line, ELEMENT_LINE);
   return line;
+}
+
+void line_destroy(Line *line) {
+  gapbuffer_free(line->buffer);
+  free(line);
 }
 
 void line_reset(Line *line) {

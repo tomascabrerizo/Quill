@@ -39,6 +39,7 @@ typedef struct Rect {
 
 Rect rect_create(i32 l, i32 r, i32 t, i32 b);
 bool rect_contains(Rect rect, i32 x, i32 y);
+bool rect_equals(Rect a, Rect b);
 bool rect_is_valid(Rect rect);
 Rect rect_intersection(Rect a, Rect b);
 Rect rect_union(Rect a, Rect b);
@@ -55,15 +56,12 @@ typedef struct BackBuffer {
   u32 *pixels;
   i32 w, h;
   Rect update_region;
-  Rect last_update_region;
-  Rect debug_update_region;
   u32 bytes_per_pixel;
 } BackBuffer;
 
 BackBuffer *backbuffer_create(i32 w, i32 h, u32 bytes_per_pixel);
 void backbuffer_destroy(BackBuffer *backbuffer);
 void backbuffer_resize(BackBuffer *backbuffer, i32 w, i32 h);
-void backbuffer_set_update_region(BackBuffer *backbuffer, Rect rect);
 
 typedef struct Glyph {
   u8 *pixels;
@@ -207,6 +205,9 @@ typedef struct Platform {
   u32 mouse_pos_x;
   u32 mouse_pos_y;
   Font *font;
+  void *data;
 } Platform;
+
+QUILL_PLATFORM_API void platform_end_draw(BackBuffer *backbuffer);
 
 #endif /* _QUILL_H_ */

@@ -12,12 +12,13 @@ typedef struct File {
   struct Line *line_first_free;
 } File;
 
-File *file_create(Element *element);
+File *file_create(void);
+void file_destroy(File *file);
 
 struct Line *file_line_create(File *file);
 void file_line_free(File *file, struct Line *line);
 
-File *file_load_from_existing_file(Element *parent, u8 *filename);
+File *file_load_from_existing_file(u8 *filename);
 void file_insert_new_line(File *file);
 void file_insert_new_line_at(File *file, u32 index);
 void file_remove_line(File *file);

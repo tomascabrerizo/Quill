@@ -6,13 +6,12 @@
 
 /* TODO: Handle unicode characters */
 typedef struct Line {
-  QUILL_ELEMENT
-
   u8 *buffer;
   struct Line *next;
 } Line;
 
-Line *line_create(struct Element *parent);
+Line *line_create(void);
+void line_destroy(Line *line);
 void line_reset(Line *line);
 void line_insert(Line *line, u8 codepoint);
 void line_insert_at_index(Line *line, u32 index, u8 codepoint);

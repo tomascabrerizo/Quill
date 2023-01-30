@@ -7,8 +7,12 @@
 
 #include "quill_file.h"
 #include "quill_editor.h"
+#include "quill_application.h"
 
 #define QUILL_PLATFORM
+
+/* NOTE: Platfom is a gobal variable define in quill.c that the platform need to implements */
+extern Platform platform;
 
 /* NOTE: Platform helper functions */
 static bool freetype_is_initialize;
@@ -119,8 +123,25 @@ QUILL_PLATFORM_API void font_destroy(Font *font) {
   free(font);
 }
 
-/* NOTE: Platfom is a gobal variable define in quill.c that the platform need to implements */
-extern Platform platform;
+QUILL_PLATFORM_API void platform_end_draw(BackBuffer *backbuffer) {
+  assert(platform.data);
+  SDL_Window *window = (SDL_Window *)platform.data;
+  SDL_Surface *window_surface = SDL_GetWindowSurface(window);
+  SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer->pixels,
+                                                                       backbuffer->w,
+                                                                       backbuffer->h,
+                                                                       backbuffer->bytes_per_pixel*8,
+                                                                       backbuffer->w * backbuffer->bytes_per_pixel,
+                                                                       window_surface->format->format);
+
+  SDL_Rect update_rect = {backbuffer->update_region.l,  backbuffer->update_region.t,
+                          backbuffer->update_region.r - backbuffer->update_region.l,
+                          backbuffer->update_region.b - backbuffer->update_region.t};
+
+  SDL_BlitSurface(backbuffer_surface, &update_rect, window_surface, &update_rect);
+  SDL_FreeSurface(backbuffer_surface);
+  SDL_UpdateWindowSurface(window);
+}
 
 /* NOTE: Each platfrom need its main function */
 
@@ -138,19 +159,19 @@ int main(void) {
   assert(window_surface->format->BytesPerPixel == 4);
   assert(window_surface->format->format == SDL_PIXELFORMAT_RGB888);
 
+  platform.data = (void *)window;
   platform.backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
+  platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);;
 
-  Editor *editor0 = editor_create(0);
-  editor0->file = file_load_from_existing_file((Element *)editor0, (u8 *)"./src/quill.c");
+  Application *application = application_create(platform.backbuffer);
+  Editor *editor0 = editor_create(&application->element);
+  editor0->file = file_load_from_existing_file((u8 *)"./src/quill.c");
+  Editor *editor1 = editor_create(&application->element);
+  editor1->file = file_load_from_existing_file((u8 *)"./src/quill.h");
+  application_set_current_editor(application, editor0);
+  Editor *editor = editor0;
 
-  Editor *editor1 = editor_create(0);
-  editor1->file = file_load_from_existing_file((Element *)editor1, (u8 *)"./src/quill.h");
-
-  Editor *editor = editor1;
   SDL_SetWindowTitle(window, (const char *)editor->file->name);
-
-  Font *font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);
-  platform.font = font;
 
   /* NOTE: Platform events */
   SDL_Event e;
@@ -158,67 +179,22 @@ int main(void) {
     if(e.type == SDL_WINDOWEVENT) {
       BackBuffer *backbuffer = platform.backbuffer;
       if(e.window.event == SDL_WINDOWEVENT_SHOWN) {
-
-        editor0->rect = rect_create(0, backbuffer->w/2, 0, backbuffer->h);
-        editor_redraw_lines(editor0, 0, (editor0->rect.b - editor0->rect.t) / platform.font->line_gap);
-        editor1->rect = rect_create(backbuffer->w/2, backbuffer->w, 0, backbuffer->h);
-        editor_redraw_lines(editor1, 0, (editor1->rect.b - editor1->rect.t) / platform.font->line_gap);
+        Rect backbuffer_rect = rect_create(0, backbuffer->w, 0, backbuffer->h);
+        element_resize(application, backbuffer_rect);
+        application_update(application);
 
       } else if(e.window.event == SDL_WINDOWEVENT_RESIZED) {
         backbuffer_resize(backbuffer, e.window.data1, e.window.data2);
-
-        editor0->rect = rect_create(0, backbuffer->w/2, 0, backbuffer->h);
-        editor_redraw_lines(editor0, 0, (editor0->rect.b - editor0->rect.t) / platform.font->line_gap);
-        editor1->rect = rect_create(backbuffer->w/2, backbuffer->w, 0, backbuffer->h);
-        editor_redraw_lines(editor1, 0, (editor1->rect.b - editor1->rect.t) / platform.font->line_gap);
+        Rect backbuffer_rect = rect_create(0, backbuffer->w, 0, backbuffer->h);
+        element_resize(application, backbuffer_rect);
+        application_update(application);
 
       } else if(e.window.event == SDL_WINDOWEVENT_EXPOSED) {
-
-        Painter painter = painter_create(backbuffer);
-
-        painter_set_font(&painter, font);
-        if(editor0->redraw) {
-          editor_draw_text(&painter, editor0);
-        }
-        if(editor1->redraw) {
-          editor_draw_text(&painter, editor1);
-        }
-
-        Rect old_clipping = painter.clipping;
-        painter.clipping = backbuffer->debug_update_region;
-        painter_draw_rect_outline(&painter, backbuffer->debug_update_region, 0xff00ff);
-        painter_draw_rect_outline(&painter, backbuffer->last_update_region, 0x202020);
-        painter_draw_rect_outline(&painter, backbuffer->update_region, 0x00ff00);
-        painter.clipping = old_clipping;
-
-        window_surface = SDL_GetWindowSurface(window);
-        SDL_Surface *backbuffer_surface = SDL_CreateRGBSurfaceWithFormatFrom(backbuffer->pixels,
-                                                                             backbuffer->w,
-                                                                             backbuffer->h,
-                                                                             backbuffer->bytes_per_pixel*8,
-                                                                             backbuffer->w * backbuffer->bytes_per_pixel,
-                                                                             window_surface->format->format);
-
-        SDL_Rect update_rect = {backbuffer->debug_update_region.l,  backbuffer->debug_update_region.t,
-                                backbuffer->debug_update_region.r - backbuffer->debug_update_region.l,
-                                backbuffer->debug_update_region.b - backbuffer->debug_update_region.t};
-
-        SDL_BlitSurface(backbuffer_surface, &update_rect, window_surface, &update_rect);
-        SDL_FreeSurface(backbuffer_surface);
-        SDL_UpdateWindowSurface(window);
-        //SDL_UpdateWindowSurfaceRects(window, (const SDL_Rect *)&update_rect, 1);
+        platform_end_draw(platform.backbuffer);
       }
     } else if(e.type == SDL_TEXTINPUT) {
       u8 codepoint = (u8)e.text.text[0];
       editor_cursor_insert(editor, codepoint);
-
-      assert(editor);
-      editor->redraw = true;
-      backbuffer_set_update_region(platform.backbuffer, editor->rect);
-      SDL_Event event;
-      event.type = SDL_WINDOWEVENT;
-      event.window.event = SDL_WINDOWEVENT_EXPOSED;
-      assert(SDL_PushEvent(&event) == 1);
 
     } else if(e.type == SDL_KEYDOWN) {
 
@@ -245,32 +221,16 @@ int main(void) {
         editor_cursor_insert_new_line(editor);
       }
 
-      assert(editor);
-      editor->redraw = true;
-      backbuffer_set_update_region(platform.backbuffer, editor->rect);
-      SDL_Event event;
-      event.type = SDL_WINDOWEVENT;
-      event.window.event = SDL_WINDOWEVENT_EXPOSED;
-      assert(SDL_PushEvent(&event) == 1);
-
     } else if(e.type == SDL_MOUSEBUTTONDOWN) {
       if(e.button.button == SDL_BUTTON_LEFT) {
-        if(rect_contains(editor0->rect, e.button.x, e.button.y)) {
+        if(rect_contains(editor0->element.rect, e.button.x, e.button.y)) {
           SDL_SetWindowTitle(window, (const char *)editor0->file->name);
           editor = editor0;
 
-        } else if(rect_contains(editor1->rect, e.button.x, e.button.y)) {
+        } else if(rect_contains(editor1->element.rect, e.button.x, e.button.y)) {
           SDL_SetWindowTitle(window, (const char *)editor1->file->name);
           editor = editor1;
         }
-
-        assert(editor);
-        editor->redraw = true;
-        backbuffer_set_update_region(platform.backbuffer, editor->rect);
-        SDL_Event event;
-        event.type = SDL_WINDOWEVENT;
-        event.window.event = SDL_WINDOWEVENT_EXPOSED;
-        assert(SDL_PushEvent(&event) == 1);
       }
     } else if(e.type == SDL_QUIT) {
       printf("Quitting application\n");
@@ -278,10 +238,10 @@ int main(void) {
     }
   }
 
-  element_destroy((Element *)editor0);
-  element_destroy((Element *)editor1);
+  element_destroy(editor0);
+  element_destroy(editor1);
   backbuffer_destroy(platform.backbuffer);
-  font_destroy(font);
+  font_destroy(platform.font);
 
   return 0;
 }
