@@ -30,7 +30,8 @@ typedef struct Editor {
   QUILL_ELEMENT
 
   struct File *file;
-  Rect file_rect;
+
+  //Rect file_rect;
 
   Cursor cursor;
   u32 col_offset;

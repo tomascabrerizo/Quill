@@ -7,23 +7,22 @@ extern Platform platform;
 
 static inline u32 editor_line_to_screen_pos(Editor *editor, u32 line_pos) {
   u32 line_height = platform.font->line_gap;
-  return editor->file_rect.t + (line_pos * line_height);
+  return element_get_rect(editor).t + (line_pos * line_height);
 }
 
 static inline u32 editor_col_to_screen_pos(Editor *editor, u32 col_pos) {
   u32 advance = platform.font->advance;
-  return editor->file_rect.l + (col_pos * advance);
+  return element_get_rect(editor).l + (col_pos * advance);
 }
 
 static inline u32 editor_screen_to_line_pos(Editor *editor, u32 screen_pos) {
   u32 line_height = platform.font->line_gap;
-  return (screen_pos - editor->file_rect.t) / line_height;
+  return (screen_pos - element_get_rect(editor).t) / line_height;
 }
 
 static inline u32 editor_max_visible_lines(Editor *editor) {
   u32 line_height = platform.font->line_gap;
-  u32 file_editor_height = (editor->file_rect.b - editor->file_rect.t);
-  return file_editor_height / line_height;
+  return element_get_height(editor) / line_height;
 }
 
 static inline u32 editor_cursor_line_to_editor_visible_line(Editor *editor) {
@@ -35,8 +34,8 @@ static inline u32 editor_cursor_col_to_editor_visible_col(Editor *editor) {
 }
 
 static inline Rect editor_get_cursor_line_rect(Editor *editor) {
-  i32 l = editor->file_rect.l;
-  i32 r = editor->file_rect.r;
+  i32 l = element_get_rect(editor).l;
+  i32 r = element_get_rect(editor).r;
 
   i32 t = editor_line_to_screen_pos(editor, editor_cursor_line_to_editor_visible_line(editor)) - platform.font->descender;
   i32 b = t + platform.font->line_gap;
@@ -59,7 +58,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
     editor_draw(painter, editor);
   } break;
   case MESSAGE_RESIZE: {
-    editor->file_rect = element_get_rect(editor);
+
   } break;
   case MESSAGE_KEYDOWN: {
     u32 key = (u32)((u64)data);
@@ -172,7 +171,7 @@ Rect editor_step_cursor_up(Editor *editor) {
     cursor->line--;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
     rect = rect_union(rect, editor_get_cursor_line_rect(editor));
-    return scroll ? editor->file_rect : rect;
+    return scroll ? element_get_rect(editor) : rect;
   }
   return rect_create(0, 0, 0, 0);
 }
@@ -197,7 +196,7 @@ Rect editor_step_cursor_down(Editor *editor) {
     cursor->line++;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
     rect = rect_union(rect, editor_get_cursor_line_rect(editor));
-    return scroll ? editor->file_rect : rect;
+    return scroll ? element_get_rect(editor) : rect;
   }
   return rect_create(0, 0, 0, 0);
 }
@@ -369,7 +368,7 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
 void editor_draw_lines(Painter *painter, Editor *editor, u32 start, u32 end) {
   File *file = editor->file;
   for(u32 i = start; i < end; ++i) {
-    u32 screen_x = editor->file_rect.l;
+    u32 screen_x = element_get_rect(editor).l;
     u32 screen_y = editor_line_to_screen_pos(editor, i) + platform.font->line_gap;
     Line *line = file_get_line_at(file, i + editor->line_offset);
     painter_draw_line(painter, line, screen_x, screen_y, 0xd0d0d0);
@@ -408,7 +407,7 @@ static inline void range_print(Range range) {
 }
 
 static inline Range editor_rect_instersect_lines(Editor *editor, Rect rect) {
-  rect = rect_intersection(rect, editor->file_rect);
+  rect = rect_intersection(rect, element_get_rect(editor));
   if(rect_is_valid(rect)) {
     Range range;
     range.start = editor_screen_to_line_pos(editor, rect.t);
@@ -422,7 +421,8 @@ void editor_draw(struct Painter *painter, Editor *editor) {
   Range lines = editor_rect_instersect_lines(editor, painter->clipping);
   range_print(lines);
   if(range_is_valid(lines)) {
-    painter_draw_rect(painter, painter->clipping, 0x202020);
+    Rect rect = rect_intersection(painter->clipping, element_get_rect(editor));
+    painter_draw_rect(painter, rect, 0x202020);
     editor_draw_lines(painter, editor, lines.start, lines.end);
     editor_draw_cursor(painter, editor);
   }
