@@ -7,7 +7,8 @@ typedef enum Message {
   MESSAGE_RESIZE,
   MESSAGE_DRAW,
   MESSAGE_KEYDOWN,
-  MESSAGE_KEYUP
+  MESSAGE_KEYUP,
+  MESSAGE_TEXTINPUT
   } Message;
 
 struct Element;

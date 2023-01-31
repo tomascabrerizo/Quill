@@ -195,6 +195,7 @@ int main(void) {
     } else if(e.type == SDL_TEXTINPUT) {
       u8 codepoint = (u8)e.text.text[0];
       editor_cursor_insert(editor, codepoint);
+      element_message(application, MESSAGE_TEXTINPUT, 0);
 
     } else if(e.type == SDL_KEYDOWN) {
 

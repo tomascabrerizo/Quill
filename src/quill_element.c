@@ -150,10 +150,3 @@ void _element_update(Element *element) {
   platform_end_draw(element->backbuffer);
   element->backbuffer->update_region = rect_create(0, 0, 0, 0);
 }
-
-
-
-
-
-
-

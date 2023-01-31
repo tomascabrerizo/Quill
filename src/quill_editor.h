@@ -25,6 +25,9 @@ void cursor_print(Cursor cursor);
 #define EDITOR_KEY_LEFT 1
 #define EDITOR_KEY_UP 2
 #define EDITOR_KEY_DOWN 3
+#define EDITOR_KEY_RETURN 4
+#define EDITOR_KEY_ENTER 5
+#define EDITOR_KEY_DELETE 6
 
 typedef struct Editor {
   QUILL_ELEMENT
@@ -44,10 +47,10 @@ typedef struct Editor {
 
 struct Editor *editor_create(Element *parent);
 
-Rect editor_step_cursor_right(Editor *editor);
-Rect editor_step_cursor_left(Editor *editor);
-Rect editor_step_cursor_up(Editor *editor);
-Rect editor_step_cursor_down(Editor *editor);
+void editor_step_cursor_right(Editor *editor);
+void editor_step_cursor_left(Editor *editor);
+void editor_step_cursor_up(Editor *editor);
+void editor_step_cursor_down(Editor *editor);
 void editor_cursor_insert(Editor *editor, u8 codepoint);
 void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);

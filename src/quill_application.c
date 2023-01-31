@@ -39,6 +39,10 @@ static int application_default_message_handler(struct Element *element, Message 
   case MESSAGE_KEYUP: {
 
   } break;
+  case MESSAGE_TEXTINPUT: {
+    element_message(application->current_editor, message, data);
+  } break;
+
   }
 
 
