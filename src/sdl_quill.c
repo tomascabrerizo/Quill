@@ -194,8 +194,7 @@ int main(void) {
       }
     } else if(e.type == SDL_TEXTINPUT) {
       u8 codepoint = (u8)e.text.text[0];
-      editor_cursor_insert(editor, codepoint);
-      element_message(application, MESSAGE_TEXTINPUT, 0);
+      element_message(application, MESSAGE_TEXTINPUT, codepoint);
 
     } else if(e.type == SDL_KEYDOWN) {
 
@@ -209,17 +208,17 @@ int main(void) {
       if(e.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RIGHT);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_LEFT) {
-        element_message(application, MESSAGE_KEYDOWN, (void *)EDITOR_KEY_LEFT);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_LEFT);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_UP) {
-        element_message(application, MESSAGE_KEYDOWN, (void *)EDITOR_KEY_UP);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_UP);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
-        element_message(application, MESSAGE_KEYDOWN, (void *)EDITOR_KEY_DOWN);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DOWN);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE) {
-        editor_cursor_remove(editor);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RETURN);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DELETE) {
-        editor_cursor_remove_right(editor);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DELETE);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_RETURN) {
-        editor_cursor_insert_new_line(editor);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_ENTER);
       }
 
     } else if(e.type == SDL_MOUSEBUTTONDOWN) {

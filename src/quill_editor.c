@@ -75,6 +75,15 @@ static int editor_default_message_handler(struct Element *element, Message messa
     case EDITOR_KEY_DOWN: {
       editor_step_cursor_down(editor);
     } break;
+    case EDITOR_KEY_RETURN: {
+      editor_cursor_remove(editor);
+    } break;
+    case EDITOR_KEY_DELETE: {
+      editor_cursor_remove_right(editor);
+    } break;
+    case EDITOR_KEY_ENTER: {
+      editor_cursor_insert_new_line(editor);
+    } break;
     }
 
     element_update(editor);
@@ -84,6 +93,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
 
   } break;
   case MESSAGE_TEXTINPUT: {
+    editor_cursor_insert(editor, (u8)(u64)data);
     element_update(editor);
   } break;
   }
@@ -104,135 +114,139 @@ Editor *editor_create(Element *parent) {
   return editor;
 }
 
-
-void editor_step_cursor_right(Editor *editor) {
-  File *file = editor->file;
-  Cursor *cursor = &editor->cursor;
-  assert(cursor->line <= file_line_count(file));
-  Line *line = file_get_line_at(file, cursor->line);
-
-  Rect rect = editor_get_cursor_line_rect(editor);
-
-  bool scroll = false;
-
-  if(cursor->col < line_size(line)) {
-    u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
-    if(line_size(line) > total_codepoints_view) {
-      u32 one_pass_last_view_codepoint = MIN(editor->col_offset + total_codepoints_view, line_size(line));
-      if(cursor->col >= (one_pass_last_view_codepoint - 1)) {
-        editor->col_offset++;
-        scroll = true;
-      }
-    }
-    cursor->col++;
-  } else if(cursor->line < (file_line_count(file) - 1)) {
-    editor_step_cursor_down(editor);
-    cursor->col = 0;
-    editor->col_offset = 0;
-  }
-  cursor->save_col = cursor->col;
-
-  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
-}
-
 void editor_step_cursor_left(Editor *editor) {
   File *file = editor->file; (void)file;
   Cursor *cursor = &editor->cursor;
-
-  Rect rect = editor_get_cursor_line_rect(editor);
+  u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
 
   bool scroll = false;
 
-  if(cursor->col > 0) {
-    if(cursor->col == editor->col_offset) {
-      editor->col_offset--;
-      scroll = true; (void)scroll;
+  if((cursor->col == 0) && (cursor->line > 0)) {
+    cursor->col = line_size(file_get_line_at(file, cursor->line - 1));
+    cursor->save_col = cursor->col;
+    if(cursor->col > total_codepoints_view) {
+      editor->col_offset = cursor->col - total_codepoints_view;
+      scroll = true;
     }
 
-    cursor->col--;
-  } else if(cursor->line > 0) {
     editor_step_cursor_up(editor);
-    cursor->col = line_size(file_get_line_at(file, cursor->line));
+
+  } else if (cursor->col > 0) {
+    if (editor->col_offset == cursor->col) {
+      --editor->col_offset;
+      scroll = true;
+    }
+
+    --cursor->col;
   }
   cursor->save_col = cursor->col;
 
-  u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
-  if(cursor->col >= total_codepoints_view) {
-    editor->col_offset = cursor->col - total_codepoints_view;
-    scroll = true;
-  } else {
-    editor->col_offset = 0;
-    scroll = true;
-  }
-
+  Rect rect = editor_get_cursor_line_rect(editor);
   element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
+
+void editor_step_cursor_right(Editor *editor) {
+  File *file = editor->file; (void)file;
+  Cursor *cursor = &editor->cursor;
+  u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
+  Line *line = file_get_line_at(file, cursor->line);
+  bool scroll = false;
+
+  if(cursor->col >= line_size(line)) {
+    cursor->col = 0;
+    cursor->save_col = cursor->col;
+    if(editor->col_offset) {
+      editor->col_offset = 0;
+      scroll = true;
+    }
+
+    editor_step_cursor_down(editor);
+
+  } else if(cursor->col < line_size(line)) {
+    if((cursor->col - editor->col_offset) >= total_codepoints_view) {
+      ++editor->col_offset;
+      scroll = true;
+    }
+
+    ++cursor->col;
+  }
+  cursor->save_col = cursor->col;
+
+  Rect rect = editor_get_cursor_line_rect(editor);
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
+}
+
 
 void editor_step_cursor_up(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line <= file_line_count(file));
+  u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
+
+  bool scroll = false;
+  Rect rect = editor_get_cursor_line_rect(editor);
 
   if(cursor->line > 0) {
-    bool scroll = false;
-
     if(cursor->line == editor->line_offset) {
-      editor->line_offset--;
-      scroll = true; (void)scroll;
+      --editor->line_offset;
+      scroll = true;
     }
 
-    Rect rect = editor_get_cursor_line_rect(editor);
-    cursor->line--;
+    --cursor->line;
+
+    u32 old_col = cursor->col;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
-    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+    i32 distance = cursor->col - old_col;
 
-    u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
-    if(cursor->col >= total_codepoints_view) {
-      editor->col_offset = cursor->col - total_codepoints_view;
+    if((distance > 0) && (cursor->col > total_codepoints_view)) {
+      editor->col_offset += (cursor->col - total_codepoints_view);
       scroll = true;
-    } else {
-      editor->col_offset = 0;
+    } else if(distance < 0) {
+      editor->col_offset -= MIN(-distance, (i32)editor->col_offset);
       scroll = true;
     }
 
-    editor_get_cursor_line_rect(editor);
-    element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
   }
+
+  rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
 
 void editor_step_cursor_down(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
+  u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
+  u32 total_lines_view = element_get_height(editor) / platform.font->line_gap;
 
+  bool scroll = false;
+  Rect rect = editor_get_cursor_line_rect(editor);
 
   if(cursor->line < (file_line_count(file) - 1)) {
-    bool scroll = false;
 
-    u32 total_lines_view = element_get_height(editor) / platform.font->line_gap;
-    u32 one_pass_last_view_line = MIN(editor->line_offset + total_lines_view, file_line_count(file));
-    if(cursor->line == (one_pass_last_view_line - 1)) {
-      editor->line_offset++;
-      scroll = true; (void)scroll;
+    if((cursor->line - editor->line_offset) >= (total_lines_view - 1)) {
+      ++editor->line_offset;
+      scroll = true;
     }
 
-    Rect rect = editor_get_cursor_line_rect(editor);
-    cursor->line++;
+    ++cursor->line;
+
+    u32 old_col = cursor->col;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
-    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+    i32 distance = cursor->col - old_col;
 
-    u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
-    if(cursor->col >= total_codepoints_view) {
-      editor->col_offset = cursor->col - total_codepoints_view;
+    if((distance > 0) && (cursor->col > total_codepoints_view)) {
+      editor->col_offset += (cursor->col - total_codepoints_view);
       scroll = true;
-    } else {
-      editor->col_offset = 0;
+    } else if(distance < 0) {
+      editor->col_offset -= MIN(-distance, (i32)editor->col_offset);
       scroll = true;
     }
 
-    editor_get_cursor_line_rect(editor);
-    element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
   }
+
+  rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
 
 void editor_cursor_insert(Editor *editor, u8 codepoint) {

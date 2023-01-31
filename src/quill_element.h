@@ -49,7 +49,7 @@ void element_set_user_message_handler(Element *element, MessageHandler user_mess
 void element_set_user_element_destroy(Element *element, ElementDestroy user_element_destroy);
 void element_set_backbuffer(Element *element, BackBuffer *backbuffer);
 
-#define element_message(e, message, data) _element_message(&(e)->element, (message), (data))
+#define element_message(e, message, data) _element_message(&(e)->element, (message), (void *)((u64)(data)))
 #define element_draw(e, painter) _element_draw(&(e)->element, (painter))
 #define element_resize(e, rect) _element_resize(&(e)->element, (rect))
 #define element_redraw(e, rect_ptr) _element_redraw(&(e)->element, (rect_ptr))
