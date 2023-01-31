@@ -370,7 +370,14 @@ void editor_draw_lines(Painter *painter, Editor *editor, u32 start, u32 end) {
   for(u32 i = start; i < end; ++i) {
     u32 screen_x = element_get_rect(editor).l;
     u32 screen_y = editor_line_to_screen_pos(editor, i) + platform.font->line_gap;
-    Line *line = file_get_line_at(file, i + editor->line_offset);
+
+    /* TODO: Handle draw end of file outside this loop */
+    u32 line_index = i + editor->line_offset;
+    if(line_index >= file_line_count(file)) {
+      return;
+    }
+    Line *line = file_get_line_at(file, line_index);
+
     painter_draw_line(painter, line, screen_x, screen_y, 0xd0d0d0);
   }
 }
@@ -419,7 +426,6 @@ static inline Range editor_rect_instersect_lines(Editor *editor, Rect rect) {
 
 void editor_draw(struct Painter *painter, Editor *editor) {
   Range lines = editor_rect_instersect_lines(editor, painter->clipping);
-  range_print(lines);
   if(range_is_valid(lines)) {
     Rect rect = rect_intersection(painter->clipping, element_get_rect(editor));
     painter_draw_rect(painter, rect, 0x202020);

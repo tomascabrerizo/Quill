@@ -84,7 +84,3 @@ void *gapbuffer_grow(void *buffer, u32 element_size) {
     return (header + 1);
   }
 }
-
-
-
-
