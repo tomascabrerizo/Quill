@@ -35,13 +35,7 @@ static inline u32 editor_cursor_col_to_editor_visible_col(Editor *editor) {
 }
 
 static inline Rect editor_get_cursor_line_rect(Editor *editor) {
-  i32 l = editor->file_rect.l;
-  i32 r = editor->file_rect.r;
-
-  i32 t = editor_line_to_screen_pos(editor, editor_cursor_line_to_editor_visible_line(editor)) - platform.font->descender;
-  i32 b = t + platform.font->line_gap;
-
-  Rect rect = rect_create(l, r, t, b);
+  Rect rect = rect_create();
   return rect;
 }
 
@@ -52,11 +46,13 @@ void cursor_print(Cursor cursor) {
 
 static int editor_default_message_handler(struct Element *element, Message message, void *data) {
   Editor *editor = (Editor *)element;
+  Cursor *cursor = &editor->cursor;
 
   switch(message) {
   case MESSAGE_DRAW: {
     Painter *painter = (Painter *)data;
     editor_draw(painter, editor);
+    editor_draw_cursor(painter, editor);
   } break;
   case MESSAGE_RESIZE: {
     editor->file_rect = element_get_rect(editor);
@@ -69,19 +65,17 @@ static int editor_default_message_handler(struct Element *element, Message messa
       element_redraw(editor, &rect);
     } break;
     case EDITOR_KEY_RIGHT: {
-      Rect rect = editor_step_cursor_right(editor);
-      element_redraw(editor, &rect);
+      editor_step_cursor_right(editor);
     } break;
     case EDITOR_KEY_UP: {
-      Rect rect = editor_step_cursor_up(editor);
-      element_redraw(editor, &rect);
+      editor_step_cursor_up(editor);
     } break;
     case EDITOR_KEY_DOWN: {
-      Rect rect = editor_step_cursor_down(editor);
-      element_redraw(editor, &rect);
+      editor_step_cursor_down(editor);
     } break;
     }
 
+    element_redraw(editor, 0);
     element_update(editor);
 
   } break;
@@ -107,14 +101,11 @@ Editor *editor_create(Element *parent) {
 }
 
 
-Rect editor_step_cursor_right(Editor *editor) {
+void editor_step_cursor_right(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line <= file_line_count(file));
   Line *line = file_get_line_at(file, cursor->line);
-
-  Rect rect = editor_get_cursor_line_rect(editor);
-
   if(cursor->col < line_size(line)) {
     u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
     if(line_size(line) > total_codepoints_view) {
@@ -125,13 +116,11 @@ Rect editor_step_cursor_right(Editor *editor) {
     }
     cursor->col++;
   } else if(cursor->line < (file_line_count(file) - 1)) {
-    rect = rect_union(rect, editor_step_cursor_down(editor));
+    editor_step_cursor_down(editor);
     cursor->col = 0;
     editor->col_offset = 0;
   }
   cursor->save_col = cursor->col;
-
-  return rect;
 }
 
 Rect editor_step_cursor_left(Editor *editor) {
@@ -147,7 +136,7 @@ Rect editor_step_cursor_left(Editor *editor) {
 
     cursor->col--;
   } else if(cursor->line > 0) {
-    rect = rect_union(rect, editor_step_cursor_up(editor));
+    editor_step_cursor_up(editor);
     cursor->col = line_size(file_get_line_at(file, cursor->line));
   }
   cursor->save_col = cursor->col;
@@ -155,51 +144,35 @@ Rect editor_step_cursor_left(Editor *editor) {
   return rect;
 }
 
-Rect editor_step_cursor_up(Editor *editor) {
+void editor_step_cursor_up(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line <= file_line_count(file));
-
   if(cursor->line > 0) {
-    bool scroll = false;
-
     if(cursor->line == editor->line_offset) {
       editor->line_offset--;
-      scroll = true;
     }
 
-    Rect rect = editor_get_cursor_line_rect(editor);
     cursor->line--;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
-    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
-    return scroll ? editor->file_rect : rect;
   }
-  return rect_create(0, 0, 0, 0);
 }
 
-Rect editor_step_cursor_down(Editor *editor) {
+void editor_step_cursor_down(Editor *editor) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
 
-
   if(cursor->line < (file_line_count(file) - 1)) {
-    bool scroll = false;
-
     u32 total_lines_view = element_get_height(editor) / platform.font->line_gap;
     u32 one_pass_last_view_line = MIN(editor->line_offset + total_lines_view, file_line_count(file));
     if(cursor->line == (one_pass_last_view_line - 1)) {
       editor->line_offset++;
-      scroll = true;
     }
 
-    Rect rect = editor_get_cursor_line_rect(editor);
     cursor->line++;
     cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
-    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
-    return scroll ? editor->file_rect : rect;
   }
-  return rect_create(0, 0, 0, 0);
 }
 
 void editor_cursor_insert(Editor *editor, u8 codepoint) {
@@ -366,68 +339,26 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
   return false;
 }
 
-void editor_draw_lines(Painter *painter, Editor *editor, u32 start, u32 end) {
+void editor_draw_lines(Painter *painter, Editor *editor, u32 start, u32 end, u32 editor_line_pos) {
   File *file = editor->file;
-  for(u32 i = start; i < end; ++i) {
+  for(u32 i = start; i <= end; ++i) {
     u32 screen_x = editor->file_rect.l;
-    u32 screen_y = editor_line_to_screen_pos(editor, i) + platform.font->line_gap;
-    Line *line = file_get_line_at(file, i + editor->line_offset);
+    u32 screen_y = editor_line_to_screen_pos(editor, editor_line_pos++) + platform.font->line_gap;
+    Line *line = file_get_line_at(file, i);
     painter_draw_line(painter, line, screen_x, screen_y, 0xd0d0d0);
   }
 }
 
 void editor_draw_cursor(struct Painter *painter, Editor *editor) {
-  i32 line = editor_line_to_screen_pos(editor, editor_cursor_line_to_editor_visible_line(editor));
+  i32 line = editor_line_to_screen_pos(editor, editor_cursor_line_to_editor_visible_line(editor)) + platform.font->line_gap;
   i32 col = editor_col_to_screen_pos(editor, editor_cursor_col_to_editor_visible_col(editor));
   i32 l = col;
-  i32 r = l + 2;
-  i32 t = line - painter->font->descender;
-  i32 b = t + platform.font->line_gap;
+  i32 r = col + 2;
+  i32 t = line - platform.font->line_gap;
+  i32 b = line;
   Rect cursor_rect = rect_create(l, r, t, b);
   painter_draw_rect(painter, cursor_rect, 0xff00ff);
 }
-
-typedef struct Range {
-  u32 start;
-  u32 end;
-} Range;
-
-static inline bool range_is_valid(Range range) {
-  return range.start < range.end;
-}
-
-static inline Range range_invalid() {
-  Range range;
-  range.end = 0;
-  range.start = 1;
-  return range;
-}
-
-static inline void range_print(Range range) {
-  printf("start: %d, end: %d\n", range.start, range.end);
-}
-
-static inline Range editor_rect_instersect_lines(Editor *editor, Rect rect) {
-  rect = rect_intersection(rect, editor->file_rect);
-  if(rect_is_valid(rect)) {
-    Range range;
-    range.start = editor_screen_to_line_pos(editor, rect.t);
-    range.end = editor_screen_to_line_pos(editor, rect.b);
-    return range;
-  }
-  return range_invalid();
-}
-
-void editor_draw(struct Painter *painter, Editor *editor) {
-  Range lines = editor_rect_instersect_lines(editor, painter->clipping);
-  range_print(lines);
-  if(range_is_valid(lines)) {
-    painter_draw_rect(painter, painter->clipping, 0x202020);
-    editor_draw_lines(painter, editor, lines.start, lines.end);
-    editor_draw_cursor(painter, editor);
-  }
-}
-
 
 void editor_draw_text(Painter *painter, Editor *editor) {
 

@@ -5,6 +5,7 @@
 #include "quill_element.h"
 
 struct Painter;
+struct Line;
 
 typedef struct Cursor {
   u32 col;
@@ -29,8 +30,8 @@ typedef struct Editor {
   QUILL_ELEMENT
 
   struct File *file;
-
   Rect file_rect;
+
   Cursor cursor;
   u32 col_offset;
   u32 line_offset;
@@ -41,20 +42,22 @@ typedef struct Editor {
 } Editor;
 
 struct Editor *editor_create(Element *parent);
-void editor_step_cursor_right(Editor *editor);
-void editor_step_cursor_left(Editor *editor);
-void editor_step_cursor_up(Editor *editor);
-void editor_step_cursor_down(Editor *editor);
+
+Rect editor_step_cursor_right(Editor *editor);
+Rect editor_step_cursor_left(Editor *editor);
+Rect editor_step_cursor_up(Editor *editor);
+Rect editor_step_cursor_down(Editor *editor);
 void editor_cursor_insert(Editor *editor, u8 codepoint);
 void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
 void editor_cursor_remove_right(Editor *editor);
 void editor_remove_selection(Editor *editor);
 void editor_update_selected(Editor *editor, bool selected);
-bool editor_is_selected(Editor *editor, u32 line, u32 col);
-void editor_draw_lines(struct Painter *painter, Editor *editor, u32 start, u32 end, u32 editor_line_pos);
-void editor_draw_cursor(struct Painter *painter, Editor *editor);
-void editor_draw_text(struct Painter *painter, Editor *editor);
 
+bool editor_is_selected(Editor *editor, u32 line, u32 col);
+void editor_draw_lines(struct Painter *painter, Editor *editor, u32 start, u32 end);
+void editor_draw_cursor(struct Painter *painter, Editor *editor);
+void editor_draw(struct Painter *painter, Editor *editor);
+void editor_draw_text(struct Painter *painter, Editor *editor);
 
 #endif /* _QUILL_EDITOR_H_ */

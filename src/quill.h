@@ -84,11 +84,12 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size);
 QUILL_PLATFORM_API void font_destroy(Font *font);
 Glyph *font_get_glyph(u16 codepoint);
 
-#define GAPBUFFER_OBJECT \
-  u8 *data; \
-  u32 size; \
-  u32 f_index; \
-  u32 s_index;
+typedef struct VectorHeader {
+  u32 capacity;
+  u32 size;
+} VectorHeader;
+
+/* TODO: Implment generic dynamic vectors in c */
 
 #define GAPBUFFER_DEFAULT_CAPACITY 8
 
