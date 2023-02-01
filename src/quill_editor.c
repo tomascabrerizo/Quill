@@ -265,14 +265,19 @@ void editor_cursor_insert_new_line(Editor *editor) {
   file_insert_new_line_at(file, cursor->line);
 
   Line *new_line = file_get_line_at(file, cursor->line);
-  editor_step_cursor_down(editor);
-  Line *old_line = file_get_line_at(file, cursor->line);
+  Line *old_line = file_get_line_at(file, cursor->line + 1);
 
   line_copy(new_line, old_line, cursor->col);
   line_remove_from_front_up_to(old_line, cursor->col);
 
-  cursor->col = 0;
-  cursor->save_col = cursor->col;
+  cursor->save_col = 0;
+  editor_step_cursor_down(editor);
+
+  //cursor->col = 0;
+  //cursor->save_col = cursor->col;
+
+  element_redraw(editor, 0);
+
 }
 
 void editor_cursor_remove(Editor *editor) {
@@ -292,14 +297,17 @@ void editor_cursor_remove(Editor *editor) {
       u32 second_line_size = line_size(second_line);
       line_copy_at(first_line, second_line, second_line_size, 0);
       file_remove_line_at(file, cursor->line);
+      /* TODO: Maybe editor_step_cursor_up and editor_step_cursor_down
+         just have to use cursor->save_col */
+      cursor->save_col = second_line_size;
       editor_step_cursor_up(editor);
-      cursor->col = second_line_size;
-      cursor->save_col = cursor->col;
     }
   } else {
     line_remove_at_index(line, cursor->col);
     editor_step_cursor_left(editor);
   }
+
+  element_redraw(editor, 0);
 }
 
 void editor_cursor_remove_right(Editor *editor) {
@@ -323,6 +331,8 @@ void editor_cursor_remove_right(Editor *editor) {
   } else {
     line_remove_at_index(line, cursor->col + 1);
   }
+
+  element_redraw(editor, 0);
 }
 
 static inline Cursor cursor_min(Cursor a, Cursor b) {
