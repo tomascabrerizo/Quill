@@ -114,6 +114,107 @@ Editor *editor_create(Element *parent) {
   return editor;
 }
 
+static inline bool editor_should_scroll(Editor *editor) {
+  Cursor *cursor = &editor->cursor;
+
+  u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;
+  u32 total_lines_view = element_get_height(editor) / platform.font->line_gap;
+
+  u32 old_col_offset = editor->col_offset;
+  if(cursor->col <= total_codepoints_view) {
+    editor->col_offset = 0;
+  } else {
+    editor->col_offset = cursor->col - total_codepoints_view;
+  }
+
+  u32 old_line_offset = editor->line_offset;
+  if(cursor->line < editor->line_offset) {
+    editor->line_offset = editor->line_offset - (editor->line_offset - cursor->line);
+  } else if(cursor->line > (editor->line_offset + total_lines_view - 1)) {
+    editor->line_offset = cursor->line - (total_lines_view - 1);
+  }
+
+  bool scroll = (old_line_offset != editor->line_offset) || (old_col_offset != editor->col_offset);
+  return scroll;
+}
+
+void editor_step_cursor_left(Editor *editor) {
+  File *file = editor->file; (void)file;
+  Cursor *cursor = &editor->cursor;
+
+  Rect rect = editor_get_cursor_line_rect(editor);
+
+  if(cursor->col > 0) {
+    --cursor->col;
+      cursor->save_col = cursor->col;
+  } else if(cursor->line > 0) {
+    cursor->col = line_size(file_get_line_at(file, cursor->line - 1));
+    cursor->save_col = cursor->col;
+    --cursor->line;
+    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+  }
+
+  bool scroll = editor_should_scroll(editor);
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
+}
+
+
+void editor_step_cursor_right(Editor *editor) {
+  File *file = editor->file; (void)file;
+  Cursor *cursor = &editor->cursor;
+  Line *line = file_get_line_at(file, cursor->line);
+
+  Rect rect = editor_get_cursor_line_rect(editor);
+
+  if(cursor->col < line_size(line)) {
+    ++cursor->col;
+    cursor->save_col = cursor->col;
+  } else if(cursor->col >= line_size(line)) {
+    cursor->col = 0;
+    cursor->save_col = cursor->col;
+    ++cursor->line;
+    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+  }
+
+  bool scroll = editor_should_scroll(editor);
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
+}
+
+void editor_step_cursor_up(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line <= file_line_count(file));
+
+  Rect rect = editor_get_cursor_line_rect(editor);
+
+  if(cursor->line > 0) {
+    --cursor->line;
+    cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
+    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+  }
+
+  bool scroll = editor_should_scroll(editor);
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
+}
+
+void editor_step_cursor_down(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+  assert(cursor->line < file_line_count(file));
+
+  Rect rect = editor_get_cursor_line_rect(editor);
+
+  if(cursor->line < (file_line_count(file) - 1)) {
+    ++cursor->line;
+    cursor->col = MIN(cursor->save_col, line_size(file_get_line_at(file, cursor->line)));
+    rect = rect_union(rect, editor_get_cursor_line_rect(editor));
+  }
+
+  bool scroll = editor_should_scroll(editor);
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
+}
+
+#if 0
 void editor_step_cursor_left(Editor *editor) {
   File *file = editor->file; (void)file;
   Cursor *cursor = &editor->cursor;
@@ -145,6 +246,8 @@ void editor_step_cursor_left(Editor *editor) {
   element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
 
+
+
 void editor_step_cursor_right(Editor *editor) {
   File *file = editor->file; (void)file;
   Cursor *cursor = &editor->cursor;
@@ -175,7 +278,6 @@ void editor_step_cursor_right(Editor *editor) {
   Rect rect = editor_get_cursor_line_rect(editor);
   element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
-
 
 void editor_step_cursor_up(Editor *editor) {
   File *file = editor->file;
@@ -248,6 +350,8 @@ void editor_step_cursor_down(Editor *editor) {
   rect = rect_union(rect, editor_get_cursor_line_rect(editor));
   element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
+
+#endif
 
 void editor_cursor_insert(Editor *editor, u8 codepoint) {
   File *file = editor->file;
