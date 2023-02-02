@@ -169,7 +169,7 @@ void editor_step_cursor_right(Editor *editor) {
   if(cursor->col < line_size(line)) {
     ++cursor->col;
     cursor->save_col = cursor->col;
-  } else if(cursor->col >= line_size(line)) {
+  } else if(cursor->line < (file_line_count(file) - 1)) {
     cursor->col = 0;
     cursor->save_col = cursor->col;
     ++cursor->line;
