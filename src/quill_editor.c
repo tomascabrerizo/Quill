@@ -121,9 +121,9 @@ static inline bool editor_should_scroll(Editor *editor) {
   u32 total_lines_view = element_get_height(editor) / platform.font->line_gap;
 
   u32 old_col_offset = editor->col_offset;
-  if(cursor->col <= total_codepoints_view) {
-    editor->col_offset = 0;
-  } else {
+  if(cursor->col < editor->col_offset) {
+    editor->col_offset = editor->col_offset - (editor->col_offset - cursor->col);
+  } else if(cursor->col > (editor->col_offset + total_codepoints_view)) {
     editor->col_offset = cursor->col - total_codepoints_view;
   }
 
