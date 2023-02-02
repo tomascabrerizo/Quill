@@ -377,9 +377,6 @@ void editor_cursor_insert_new_line(Editor *editor) {
   cursor->save_col = 0;
   editor_step_cursor_down(editor);
 
-  //cursor->col = 0;
-  //cursor->save_col = cursor->col;
-
   element_redraw(editor, 0);
 
 }
@@ -401,8 +398,7 @@ void editor_cursor_remove(Editor *editor) {
       u32 second_line_size = line_size(second_line);
       line_copy_at(first_line, second_line, second_line_size, 0);
       file_remove_line_at(file, cursor->line);
-      /* TODO: Maybe editor_step_cursor_up and editor_step_cursor_down
-         just have to use cursor->save_col */
+
       cursor->save_col = second_line_size;
       editor_step_cursor_up(editor);
     }
