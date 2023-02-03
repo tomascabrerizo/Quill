@@ -48,7 +48,6 @@ void cursor_print(Cursor cursor) {
   printf("line:%d, col:%d\n", cursor.line, cursor.col);
 }
 
-
 static int editor_default_message_handler(struct Element *element, Message message, void *data) {
   Editor *editor = (Editor *)element;
 
@@ -121,17 +120,20 @@ static inline bool editor_should_scroll(Editor *editor) {
   u32 total_lines_view = element_get_height(editor) / platform.font->line_gap;
 
   u32 old_col_offset = editor->col_offset;
-  if(cursor->col < editor->col_offset) {
-    editor->col_offset = editor->col_offset - (editor->col_offset - cursor->col);
-  } else if(cursor->col > (editor->col_offset + total_codepoints_view)) {
-    editor->col_offset = cursor->col - total_codepoints_view;
+  if(total_codepoints_view) {
+    if(cursor->col < editor->col_offset) {
+      editor->col_offset = editor->col_offset - (editor->col_offset - cursor->col);
+    } else if(cursor->col > (editor->col_offset + (total_codepoints_view - 1))) {
+      editor->col_offset = cursor->col - (total_codepoints_view - 1);
+    }
   }
-
   u32 old_line_offset = editor->line_offset;
-  if(cursor->line < editor->line_offset) {
-    editor->line_offset = editor->line_offset - (editor->line_offset - cursor->line);
-  } else if(cursor->line > (editor->line_offset + total_lines_view - 1)) {
-    editor->line_offset = cursor->line - (total_lines_view - 1);
+  if(total_lines_view) {
+    if(cursor->line < editor->line_offset) {
+      editor->line_offset = editor->line_offset - (editor->line_offset - cursor->line);
+    } else if(cursor->line > (editor->line_offset + (total_lines_view - 1))) {
+      editor->line_offset = cursor->line - (total_lines_view - 1);
+    }
   }
 
   bool scroll = (old_line_offset != editor->line_offset) || (old_col_offset != editor->col_offset);
@@ -157,7 +159,6 @@ void editor_step_cursor_left(Editor *editor) {
   bool scroll = editor_should_scroll(editor);
   element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
-
 
 void editor_step_cursor_right(Editor *editor) {
   File *file = editor->file; (void)file;
