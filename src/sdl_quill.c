@@ -223,14 +223,11 @@ int main(void) {
 
     } else if(e.type == SDL_MOUSEBUTTONDOWN) {
       if(e.button.button == SDL_BUTTON_LEFT) {
-        if(rect_contains(editor0->element.rect, e.button.x, e.button.y)) {
-          SDL_SetWindowTitle(window, (const char *)editor0->file->name);
-          editor = editor0;
-
-        } else if(rect_contains(editor1->element.rect, e.button.x, e.button.y)) {
-          SDL_SetWindowTitle(window, (const char *)editor1->file->name);
-          editor = editor1;
-        }
+        EditorMessage message;
+        message.type = EDITOR_BUTTON_LEFT;
+        message.button.x = e.button.x;
+        message.button.y = e.button.y;
+        element_message(application, MESSAGE_BUTTONDOWN, &message);
       }
     } else if(e.type == SDL_QUIT) {
       printf("Quitting application\n");

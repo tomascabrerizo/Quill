@@ -8,8 +8,9 @@ typedef enum Message {
   MESSAGE_DRAW,
   MESSAGE_KEYDOWN,
   MESSAGE_KEYUP,
-  MESSAGE_TEXTINPUT
-  } Message;
+  MESSAGE_TEXTINPUT,
+  MESSAGE_BUTTONDOWN,
+} Message;
 
 struct Element;
 typedef i32 (*MessageHandler)(struct Element *element, Message message, void *data);

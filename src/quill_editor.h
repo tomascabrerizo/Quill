@@ -21,13 +21,33 @@ void cursor_print(Cursor cursor);
 #define EDITOR_MOD_SHIFT_LEFT 0xc0000000;
 #define EDITOR_MOD_SHIFT (EDITOR_MOD_SHIFT_RIGHT|EDITOR_MOD_SHIFT_LEFT)
 
-#define EDITOR_KEY_RIGHT 0
-#define EDITOR_KEY_LEFT 1
-#define EDITOR_KEY_UP 2
-#define EDITOR_KEY_DOWN 3
-#define EDITOR_KEY_RETURN 4
-#define EDITOR_KEY_ENTER 5
-#define EDITOR_KEY_DELETE 6
+#define EDITOR_MESSAGE EditorMessageType type;
+
+/* TODO: Define this structures in quill_message.h */
+
+typedef enum EditorMessageType {
+  EDITOR_KEY_RIGHT,
+  EDITOR_KEY_LEFT,
+  EDITOR_KEY_UP,
+  EDITOR_KEY_DOWN,
+  EDITOR_KEY_RETURN,
+  EDITOR_KEY_ENTER,
+  EDITOR_KEY_DELETE,
+
+  EDITOR_BUTTON_LEFT
+
+} EditorMessageType;
+
+typedef struct ButtonMessage {
+  EDITOR_MESSAGE
+  i32 x;
+  i32 y;
+} ButtonMessage;
+
+typedef union EditorMessage {
+  EDITOR_MESSAGE
+  ButtonMessage button;
+} EditorMessage;
 
 typedef struct Editor {
   QUILL_ELEMENT

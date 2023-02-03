@@ -42,6 +42,21 @@ static int application_default_message_handler(struct Element *element, Message 
   case MESSAGE_TEXTINPUT: {
     element_message(application->current_editor, message, data);
   } break;
+  case MESSAGE_BUTTONDOWN: {
+    EditorMessage *message = (EditorMessage *)data;
+    if(message->type == EDITOR_BUTTON_LEFT) {
+      Application *application = (Application *)element;
+      Element *child = element->first_child;
+      while(child) {
+        if(rect_contains(child->rect, message->button.x, message->button.y)) {
+          /* TODO: Assert that the child is and editor */
+          application->current_editor = (Editor *)child;
+        }
+        child = child->next;
+      }
+    }
+
+  } break;
 
   }
 
