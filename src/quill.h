@@ -51,6 +51,7 @@ typedef struct ByteArray {
 } ByteArray;
 
 QUILL_PLATFORM_API ByteArray load_entire_file(u8 *filename);
+QUILL_PLATFORM_API struct Folder *platform_load_folder(u8 *foldername);
 
 typedef struct BackBuffer {
   u32 *pixels;

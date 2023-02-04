@@ -25,11 +25,16 @@ struct Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
 
 typedef struct Folder {
-  File *files;
-  u32 files_count;
-  struct Folder *folders;
-  u32 folders_count;
+  u8 *name;
+  File **files;
+  struct Folder **folders;
 } Folder;
 
+Folder *folder_create(u8 *name);
+Folder *folder_load(u8 *folderpath);
+void folder_destroy(Folder *folder);
+
+void folder_add_file(Folder *folder, File *file);
+void folder_add_folder(Folder *parent, Folder *child);
 
 #endif /* _QUILL_FILE_H_ */

@@ -130,3 +130,39 @@ Line *file_get_line_at(File *file, u32 index) {
 u32 file_line_count(File *file) {
   return gapbuffer_size(file->buffer);
 }
+
+
+Folder *folder_create(u8 *name) {
+  Folder *folder = (Folder *)malloc(sizeof(Folder));
+  memset(folder, 0, sizeof(Folder));
+  folder->name = name;
+  return folder;
+}
+
+Folder *folder_load(u8 *folderpath) {
+  return platform_load_folder(folderpath);
+}
+
+void folder_destroy(Folder *folder) {
+  for(u32 i = 0; i < vector_size(folder->files); ++i) {
+    file_destroy(folder->files[i]);
+  }
+  for(u32 i = 0; i < vector_size(folder->folders); ++i) {
+    folder_destroy(folder->folders[i]);
+  }
+  vector_free(folder->files);
+  vector_free(folder->folders);
+  free(folder);
+}
+
+void folder_add_file(Folder *folder, File *file) {
+  vector_push(folder->files, file);
+}
+
+void folder_add_folder(Folder *parent, Folder *child) {
+  vector_push(parent->folders, child);
+}
+
+
+
+

@@ -4,6 +4,12 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
+
+/* TODO: This is linux specific, Remove it from sdl_quill.c */
+#include <sys/types.h>
+#include <dirent.h>
+/* -------------------------------------------------------- */
 
 #include "quill_file.h"
 #include "quill_editor.h"
@@ -33,6 +39,45 @@ void freetype_shutdow() {
 }
 
 /* NOTE: Function from the platform to the program */
+
+QUILL_PLATFORM_API Folder *platform_load_folder(u8 *foldername) {
+  Folder *folder = folder_create(foldername);
+
+  DIR *directory = opendir((char *)foldername);
+  if(!directory) {
+    printf("Cannot load folder: %s\n", foldername);
+    exit(-1);
+  }
+
+  static u8 current_dir[256];
+  u32 current_dir_size = strlen((char *)foldername);
+  SDL_memcpy(current_dir, foldername, current_dir_size);
+  current_dir[current_dir_size++] = '/';
+
+  struct dirent *node = readdir(directory);
+  while(node) {
+    /* TODO: If the node is a directory this function have to recursively call itself */
+    if( !strcmp(node->d_name, ".") || !strcmp(node->d_name, "..")) {
+      node = readdir(directory);
+      continue;
+    }
+
+    u32 file_name_size = strlen(node->d_name);
+    memcpy(current_dir + current_dir_size, node->d_name, file_name_size);
+    u8 *filepath = current_dir;
+    filepath[current_dir_size + file_name_size] = 0;
+
+    printf("%s\n", filepath);
+
+    File *file = file_load_from_existing_file(filepath);
+    vector_push(folder->files, file);
+    node = readdir(directory);
+  }
+
+  printf("folder files count:%d\n", vector_size(folder->files));
+
+  return folder;
+}
 
 QUILL_PLATFORM_API ByteArray load_entire_file(u8 *filename) {
   FILE *file = fopen((char *)filename, "rb");
@@ -170,6 +215,9 @@ int main(void) {
   editor1->file = file_load_from_existing_file((u8 *)"./src/quill.h");
   application_set_current_editor(application, editor0);
   Editor *editor = editor0;
+
+  Folder *folder = platform_load_folder((u8 *)"./src");
+  (void)folder;
 
   /* NOTE: Platform events */
   SDL_Event e;
