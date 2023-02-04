@@ -161,7 +161,7 @@ int main(void) {
 
   platform.data = (void *)window;
   platform.backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
-  platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);;
+  platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 16);
 
   Application *application = application_create(platform.backbuffer);
   Editor *editor0 = editor_create(&application->element);
@@ -170,8 +170,6 @@ int main(void) {
   editor1->file = file_load_from_existing_file((u8 *)"./src/quill.h");
   application_set_current_editor(application, editor0);
   Editor *editor = editor0;
-
-  SDL_SetWindowTitle(window, (const char *)editor->file->name);
 
   /* NOTE: Platform events */
   SDL_Event e;

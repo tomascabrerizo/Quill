@@ -24,4 +24,12 @@ void file_print(File *file);
 struct Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
 
+typedef struct Folder {
+  File *files;
+  u32 files_count;
+  struct Folder *folders;
+  u32 folders_count;
+} Folder;
+
+
 #endif /* _QUILL_FILE_H_ */

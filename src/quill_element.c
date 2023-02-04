@@ -144,7 +144,6 @@ void _element_redraw(Element *element, Rect *rect) {
       element->backbuffer->update_region = r;
     }
   }
-  //rect_print(element->backbuffer->update_region);
 }
 
 void _element_update(Element *element) {

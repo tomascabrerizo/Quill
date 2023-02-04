@@ -84,12 +84,27 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size);
 QUILL_PLATFORM_API void font_destroy(Font *font);
 Glyph *font_get_glyph(u16 codepoint);
 
+#define VECTOR_DEFAULT_CAPACITY 8
+
 typedef struct VectorHeader {
   u32 capacity;
   u32 size;
 } VectorHeader;
 
-/* TODO: Implment generic dynamic vectors in c */
+void *vector_grow(void *vector, u32 element_size);
+
+#define vector_header(vector) ((VectorHeader *)((u8 *)(vector)-sizeof(VectorHeader)))
+
+#define vector_capacity(vector) ((vector) != 0 ? vector_header((vector))->capacity : 0)
+
+#define vector_size(vector) ((vector) != 0 ? vector_header((vector))->size : 0)
+
+#define vector_fit(vector) (vector_size((vector)) >= vector_capacity((vector)) ? \
+  (vector) = vector_grow((vector), sizeof(*(vector))) : 0)
+
+#define vector_push(vector, value) (vector_fit(vector), (vector)[vector_header((vector))->size++] = (value))
+
+#define vector_free(vector) ((vector != 0) ? (free(vector_header((vector)))) : 0)
 
 #define GAPBUFFER_DEFAULT_CAPACITY 8
 
