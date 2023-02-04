@@ -113,6 +113,9 @@ void _element_draw(Element *element, Painter *painter) {
 
     child = child->next;
   }
+
+  painter->clipping = clip;
+  _element_message(element, MESSAGE_DRAW_ON_TOP, (void *)painter);
 }
 
 void _element_resize(Element *element, Rect rect) {

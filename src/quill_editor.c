@@ -56,6 +56,9 @@ static int editor_default_message_handler(struct Element *element, Message messa
     Painter *painter = (Painter *)data;
     editor_draw(painter, editor);
   } break;
+  case MESSAGE_DRAW_ON_TOP: {
+
+  } break;
   case MESSAGE_RESIZE: {
 
   } break;
