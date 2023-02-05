@@ -1,6 +1,7 @@
 #include "quill_application.h"
 #include "quill_editor.h"
 #include "quill_painter.h"
+#include "quill_file.h"
 
 extern Platform platform;
 
@@ -26,9 +27,38 @@ static int application_default_message_handler(struct Element *element, Message 
     rect.b += (gap/2);
     painter_draw_rect_outline(painter, rect, 0x0000ff);
 
+    if(application->file_selector) {
+      /* TODO: Try to manage the selector clipping always from the application */
+      Rect old_clipping = painter->clipping;
+      painter->clipping = application->file_selector_rect;
+      painter_draw_rect(painter, application->file_selector_rect, 0x000000);
+      Folder *folder = application->folder;
+      if(folder) {
+        i32 start_x = application->file_selector_rect.l;
+        i32 start_y = application->file_selector_rect.t + platform.font->line_gap;
+        for(u32 i = 0; i < vector_size(folder->files); ++i) {
+          File *file = folder->files[i];
+          painter_draw_text(painter, file->name, strlen((char *)file->name), start_x, start_y, 0xffffff);
+          start_y += platform.font->line_gap;
+        }
+        Rect selected_rect = application->file_selector_rect;
+        selected_rect.t = application->file_selector_rect.t + (application->file_selected_index*platform.font->line_gap - platform.font->descender);
+        selected_rect.b = selected_rect.t + platform.font->line_gap;
+        painter_draw_rect_outline(painter, selected_rect, 0x0000ff);
+      }
+      painter->clipping = old_clipping;
+    }
+
   } break;
   case MESSAGE_RESIZE: {
 
+    /* NOTE: Resize file selector rect */
+    application->file_selector_rect.l = (u32)(element_get_rect(application).r * 0.25f);
+    application->file_selector_rect.r = (u32)(element_get_rect(application).r * 0.75f);
+    application->file_selector_rect.t = (u32)(element_get_rect(application).b * 0.25f);
+    application->file_selector_rect.b = (u32)(element_get_rect(application).b * 0.75f);
+
+    /* NOTE: Resize editor of the application */
     i32 child_count = element_get_child_count(element);
     i32 rect_w = ((element->rect.r - element->rect.l) / child_count) - (gap + gap / 2);
 
@@ -46,7 +76,35 @@ static int application_default_message_handler(struct Element *element, Message 
 
   } break;
   case MESSAGE_KEYDOWN: {
-    element_message(application->current_editor, message, data);
+    u32 keycode = (u32)(u64)data;
+    if(keycode == (EDITOR_KEY_P|EDITOR_MOD_CRTL)) {
+      application->file_selector = !application->file_selector;
+      Rect *rect = 0;
+      if(application->file_selector) {
+        rect = &application->file_selector_rect;
+      }
+      element_redraw(application, rect);
+      element_update(application);
+    }
+
+    if(application->file_selector && application->folder && application->folder->files) {
+      Rect *rect = 0;
+      if(keycode == EDITOR_KEY_DOWN) {
+        application->file_selected_index = MIN(application->file_selected_index + 1, MAX(vector_size(application->folder->files)-1, 0));
+        rect = &application->file_selector_rect;
+      } else if(keycode == EDITOR_KEY_UP) {
+        application->file_selected_index = MAX((i32)application->file_selected_index - 1, 0);
+        rect = &application->file_selector_rect;
+      } else if(keycode == EDITOR_KEY_ENTER) {
+        application->current_editor->file = application->folder->files[application->file_selected_index];
+      }
+      element_redraw(application, rect);
+      element_update(application);
+
+    } else {
+      element_message(application->current_editor, message, data);
+    }
+
   } break;
   case MESSAGE_KEYUP: {
 
@@ -78,13 +136,20 @@ static int application_default_message_handler(struct Element *element, Message 
 
   }
 
-
   return 0;
+}
+
+static void application_user_derstroy(Element *element) {
+  Application *application = (Application *)element;
+  folder_destroy(application->folder);
+  printf("application destroy\n");
 }
 
 Application *application_create(BackBuffer *backbuffer) {
   Application *application = (Application *)element_create(sizeof(Application), 0, application_default_message_handler);
   element_set_backbuffer(&application->element, backbuffer);
+  element_set_user_element_destroy(&application->element, application_user_derstroy);
+  application->file_selector = false;
   return application;
 }
 

@@ -5,10 +5,20 @@
 #include "quill_element.h"
 
 struct Editor;
+struct Folder;
 
 typedef struct Application {
   QUILL_ELEMENT
+
+  /* TODO: The application should have and array of Editors to easy access them */
+
+  bool file_selector;
+  u32 file_selected_index;
+  Rect file_selector_rect;
+
   struct Editor *current_editor;
+  struct Folder *folder;
+
 } Application;
 
 Application *application_create(BackBuffer *backbuffer);

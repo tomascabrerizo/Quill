@@ -67,14 +67,10 @@ QUILL_PLATFORM_API Folder *platform_load_folder(u8 *foldername) {
     u8 *filepath = current_dir;
     filepath[current_dir_size + file_name_size] = 0;
 
-    printf("%s\n", filepath);
-
     File *file = file_load_from_existing_file(filepath);
     vector_push(folder->files, file);
     node = readdir(directory);
   }
-
-  printf("folder files count:%d\n", vector_size(folder->files));
 
   return folder;
 }
@@ -210,14 +206,9 @@ int main(void) {
 
   Application *application = application_create(platform.backbuffer);
   Editor *editor0 = editor_create(&application->element);
-  editor0->file = file_load_from_existing_file((u8 *)"./src/quill.c");
-  Editor *editor1 = editor_create(&application->element);
-  editor1->file = file_load_from_existing_file((u8 *)"./src/quill.h");
+  Editor *editor1 = editor_create(&application->element); (void)editor1;
   application_set_current_editor(application, editor0);
-  Editor *editor = editor0;
-
-  Folder *folder = platform_load_folder((u8 *)"./src");
-  (void)folder;
+  application->folder = platform_load_folder((u8 *)"./src");
 
   /* NOTE: Platform events */
   SDL_Event e;
@@ -248,7 +239,7 @@ int main(void) {
          (e.key.keysym.scancode == SDL_SCANCODE_LEFT) ||
          (e.key.keysym.scancode == SDL_SCANCODE_UP) ||
          (e.key.keysym.scancode == SDL_SCANCODE_DOWN)) {
-        editor_update_selected(editor, e.key.keysym.mod & KMOD_SHIFT);
+        editor_update_selected(application->current_editor, e.key.keysym.mod & KMOD_SHIFT);
       }
 
       if(e.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
@@ -265,6 +256,12 @@ int main(void) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DELETE);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_RETURN) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_ENTER);
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_P) {
+        u32 keycode = EDITOR_KEY_P;
+        if(e.key.keysym.mod & KMOD_CTRL) {
+          keycode |= EDITOR_MOD_CRTL;
+        }
+        element_message(application, MESSAGE_KEYDOWN, keycode);
       }
 
     } else if(e.type == SDL_MOUSEBUTTONDOWN) {
@@ -281,8 +278,7 @@ int main(void) {
     }
   }
 
-  element_destroy(editor0);
-  element_destroy(editor1);
+  element_destroy(application);
   backbuffer_destroy(platform.backbuffer);
   font_destroy(platform.font);
 

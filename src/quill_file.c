@@ -3,9 +3,12 @@
 
 extern Platform platform;
 
-File *file_create(void) {
+File *file_create(u8 *filename) {
   File *file = (File *)malloc(sizeof(File));
   memset(file, 0, sizeof(File));
+  u32 filename_size = strlen((char *)filename);
+  assert(filename_size <= FILE_MAX_NAME_SIZE);
+  memcpy(file->name, filename, filename_size);
   return file;
 }
 
@@ -46,8 +49,7 @@ File *file_load_from_existing_file(u8 *filename) {
   /* TODO: Maybe load the file with memcpy into the seconds gap */
 
   ByteArray buffer = load_entire_file(filename);
-  File *file = file_create();
-  file->name = filename;
+  File *file = file_create(filename);
   if(buffer.size > 0) {
     file_insert_new_line(file);
 
@@ -135,7 +137,9 @@ u32 file_line_count(File *file) {
 Folder *folder_create(u8 *name) {
   Folder *folder = (Folder *)malloc(sizeof(Folder));
   memset(folder, 0, sizeof(Folder));
-  folder->name = name;
+  u32 name_size = strlen((char *)name);
+  assert(name_size <= FOLDER_MAX_NAME_SIZE);
+  memcpy(folder->name, name, name_size);
   return folder;
 }
 
@@ -144,6 +148,9 @@ Folder *folder_load(u8 *folderpath) {
 }
 
 void folder_destroy(Folder *folder) {
+  if(!folder) {
+    return;
+  }
   for(u32 i = 0; i < vector_size(folder->files); ++i) {
     file_destroy(folder->files[i]);
   }

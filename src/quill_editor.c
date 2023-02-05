@@ -36,7 +36,7 @@ static inline u32 editor_cursor_col_to_editor_visible_col(Editor *editor) {
 static inline Rect editor_get_cursor_line_rect(Editor *editor) {
   i32 l = element_get_rect(editor).l;
   i32 r = element_get_rect(editor).r;
-
+  /* TODO: Look why descender is use only in cursor calculation */
   i32 t = editor_line_to_screen_pos(editor, editor_cursor_line_to_editor_visible_line(editor)) - platform.font->descender;
   i32 b = t + platform.font->line_gap;
 
@@ -63,39 +63,45 @@ static int editor_default_message_handler(struct Element *element, Message messa
 
   } break;
   case MESSAGE_KEYDOWN: {
-    u32 key = (u32)((u64)data);
-    switch(key) {
-    case EDITOR_KEY_LEFT: {
-      editor_step_cursor_left(editor);
-    } break;
-    case EDITOR_KEY_RIGHT: {
-      editor_step_cursor_right(editor);
-    } break;
-    case EDITOR_KEY_UP: {
-      editor_step_cursor_up(editor);
-    } break;
-    case EDITOR_KEY_DOWN: {
-      editor_step_cursor_down(editor);
-    } break;
-    case EDITOR_KEY_RETURN: {
-      editor_cursor_remove(editor);
-    } break;
-    case EDITOR_KEY_DELETE: {
-      editor_cursor_remove_right(editor);
-    } break;
-    case EDITOR_KEY_ENTER: {
-      editor_cursor_insert_new_line(editor);
-    } break;
-    }
+    /* TODO: Find a good way to handle when the editor has no file */
+    if(editor->file) {
+      u32 key = (u32)((u64)data);
+      switch(key) {
+      case EDITOR_KEY_LEFT: {
+        editor_step_cursor_left(editor);
+      } break;
+      case EDITOR_KEY_RIGHT: {
+        editor_step_cursor_right(editor);
+      } break;
+      case EDITOR_KEY_UP: {
+        editor_step_cursor_up(editor);
+      } break;
+      case EDITOR_KEY_DOWN: {
+        editor_step_cursor_down(editor);
+      } break;
+      case EDITOR_KEY_RETURN: {
+        editor_cursor_remove(editor);
+      } break;
+      case EDITOR_KEY_DELETE: {
+        editor_cursor_remove_right(editor);
+      } break;
+      case EDITOR_KEY_ENTER: {
+        editor_cursor_insert_new_line(editor);
+      } break;
+      }
 
-    element_update(editor);
+      element_update(editor);
+    }
 
   } break;
   case MESSAGE_KEYUP: {
 
   } break;
   case MESSAGE_TEXTINPUT: {
-    editor_cursor_insert(editor, (u8)(u64)data);
+    /* TODO: Find a good way to handle when the editor has no file */
+    if(editor->file) {
+      editor_cursor_insert(editor, (u8)(u64)data);
+    }
     element_update(editor);
   } break;
   case MESSAGE_BUTTONDOWN: {
@@ -107,10 +113,8 @@ static int editor_default_message_handler(struct Element *element, Message messa
 }
 
 static void editor_user_element_destroy(Element *element) {
-  Editor *editor = (Editor *)element;
-  if(editor->file) {
-    file_destroy(editor->file);
-  }
+  (void)element;
+  printf("Editor destroy\n");
 }
 
 Editor *editor_create(Element *parent) {
@@ -147,7 +151,7 @@ static inline bool editor_should_scroll(Editor *editor) {
 }
 
 void editor_step_cursor_left(Editor *editor) {
-  File *file = editor->file; (void)file;
+  File *file = editor->file;
   Cursor *cursor = &editor->cursor;
 
   Rect rect = editor_get_cursor_line_rect(editor);
@@ -393,6 +397,9 @@ bool editor_is_selected(Editor *editor, u32 line, u32 col) {
 
 void editor_draw_lines(Painter *painter, Editor *editor, u32 start, u32 end) {
   File *file = editor->file;
+  if(!file) {
+    return;
+  }
   for(u32 i = start; i < end; ++i) {
     u32 screen_x = element_get_rect(editor).l - editor->col_offset * platform.font->advance;
     u32 screen_y = editor_line_to_screen_pos(editor, i) + platform.font->line_gap;
@@ -413,6 +420,7 @@ void editor_draw_cursor(struct Painter *painter, Editor *editor) {
   i32 col = editor_col_to_screen_pos(editor, editor_cursor_col_to_editor_visible_col(editor));
   i32 l = col;
   i32 r = l + 2;
+  /* TODO: Look why descender is use only in cursor calculation */
   i32 t = line - painter->font->descender;
   i32 b = t + platform.font->line_gap;
   Rect cursor_rect = rect_create(l, r, t, b);
@@ -460,7 +468,7 @@ void editor_draw(struct Painter *painter, Editor *editor) {
   }
 }
 
-
+#if 0
 void editor_draw_text(Painter *painter, Editor *editor) {
 
   painter_draw_rect(painter, editor->element.rect, 0x202020);
@@ -506,3 +514,4 @@ void editor_draw_text(Painter *painter, Editor *editor) {
   Rect cursor_rect = rect_create(l, r, t, b);
   painter_draw_rect(painter, cursor_rect, 0xff00ff);
 }
+#endif

@@ -3,13 +3,14 @@
 
 #include "quill.h"
 
+#define FILE_MAX_NAME_SIZE 256
 typedef struct File {
-  u8 *name;
+  u8 name[FILE_MAX_NAME_SIZE];
   struct Line **buffer;
   struct Line *line_first_free;
 } File;
 
-File *file_create(void);
+File *file_create(u8 *filename);
 void file_destroy(File *file);
 
 struct Line *file_line_create(File *file);
@@ -24,8 +25,9 @@ void file_print(File *file);
 struct Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
 
+#define FOLDER_MAX_NAME_SIZE 256
 typedef struct Folder {
-  u8 *name;
+  u8 name[FOLDER_MAX_NAME_SIZE];
   File **files;
   struct Folder **folders;
 } Folder;

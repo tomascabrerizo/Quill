@@ -125,7 +125,6 @@ void _element_resize(Element *element, Rect rect) {
   } else {
     element->clip = rect;
   }
-
   if(!rect_equals(element->rect, rect) || !rect_equals(element->clip, old_clip)) {
     element->rect = rect;
     _element_message(element, MESSAGE_RESIZE, 0);

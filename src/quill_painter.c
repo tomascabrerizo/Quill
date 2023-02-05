@@ -31,6 +31,8 @@ void painter_draw_rect(Painter *painter, Rect rect, u32 color) {
 }
 
 void painter_draw_rect_outline(Painter *painter, Rect rect, u32 color) {
+  /* NOTE: This function draw a rect outline but is not clipping the outline
+    it will create a outline of the clipping intersection */
   rect = rect_intersection(rect, painter->clipping);
   if(!rect_is_valid(rect)) {
     return;
