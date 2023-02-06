@@ -128,7 +128,8 @@ bool editor_should_scroll(Editor *editor) {
   u32 old_col_offset = editor->col_offset;
   if(total_codepoints_view) {
     if(cursor->col < editor->col_offset) {
-      editor->col_offset = editor->col_offset - (editor->col_offset - cursor->col);
+      //editor->col_offset = editor->col_offset - (editor->col_offset - cursor->col);
+      editor->col_offset = cursor->col;
     } else if(cursor->col > (editor->col_offset + (total_codepoints_view - 1))) {
       editor->col_offset = cursor->col - (total_codepoints_view - 1);
     }
@@ -136,7 +137,7 @@ bool editor_should_scroll(Editor *editor) {
   u32 old_line_offset = editor->line_offset;
   if(total_lines_view) {
     if(cursor->line < editor->line_offset) {
-      editor->line_offset = editor->line_offset - (editor->line_offset - cursor->line);
+      editor->line_offset = cursor->line;
     } else if(cursor->line > (editor->line_offset + (total_lines_view - 1))) {
       editor->line_offset = cursor->line - (total_lines_view - 1);
     }

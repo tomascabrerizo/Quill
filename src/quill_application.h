@@ -15,6 +15,7 @@ typedef struct Application {
 
   bool file_selector;
   u32 file_selected_index;
+  u32 file_selector_offset;
   Rect file_selector_rect;
 
   struct Editor *current_editor;

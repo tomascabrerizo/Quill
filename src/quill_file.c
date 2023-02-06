@@ -1,4 +1,5 @@
 #include "quill_file.h"
+#include "quill_data_structures.h"
 #include "quill_line.h"
 
 extern Platform platform;

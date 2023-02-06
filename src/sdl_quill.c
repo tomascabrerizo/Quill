@@ -11,6 +11,7 @@
 #include <dirent.h>
 /* -------------------------------------------------------- */
 
+#include "quill_data_structures.h"
 #include "quill_file.h"
 #include "quill_editor.h"
 #include "quill_application.h"

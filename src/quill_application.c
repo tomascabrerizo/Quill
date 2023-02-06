@@ -1,4 +1,5 @@
 #include "quill_application.h"
+#include "quill_data_structures.h"
 #include "quill_editor.h"
 #include "quill_painter.h"
 #include "quill_file.h"
@@ -36,13 +37,13 @@ static int application_default_message_handler(struct Element *element, Message 
       if(folder) {
         i32 start_x = application->file_selector_rect.l;
         i32 start_y = application->file_selector_rect.t + platform.font->line_gap;
-        for(u32 i = 0; i < vector_size(folder->files); ++i) {
+        for(u32 i = application->file_selector_offset; i < vector_size(folder->files); ++i) {
           File *file = folder->files[i];
           painter_draw_text(painter, file->name, strlen((char *)file->name), start_x, start_y, 0xffffff);
           start_y += platform.font->line_gap;
         }
         Rect selected_rect = application->file_selector_rect;
-        selected_rect.t = application->file_selector_rect.t + (application->file_selected_index*platform.font->line_gap - platform.font->descender);
+        selected_rect.t = application->file_selector_rect.t + ((application->file_selected_index - application->file_selector_offset)*platform.font->line_gap - platform.font->descender);
         selected_rect.b = selected_rect.t + platform.font->line_gap;
         painter_draw_rect_outline(painter, selected_rect, 0x0000ff);
       }
@@ -89,12 +90,26 @@ static int application_default_message_handler(struct Element *element, Message 
 
     if(application->file_selector && application->folder && application->folder->files) {
       Rect *rect = 0;
+
+      u32 selector_heihgt = application->file_selector_rect.b - application->file_selector_rect.t;
+      u32 total_lines_view = selector_heihgt / platform.font->line_gap;
+
       if(keycode == EDITOR_KEY_DOWN) {
         application->file_selected_index = MIN(application->file_selected_index + 1, MAX(vector_size(application->folder->files)-1, 0));
         rect = &application->file_selector_rect;
+
+        if(application->file_selected_index > (application->file_selector_offset + (total_lines_view - 1))) {
+          application->file_selector_offset = application->file_selected_index - (total_lines_view - 1);
+        }
+
       } else if(keycode == EDITOR_KEY_UP) {
         application->file_selected_index = MAX((i32)application->file_selected_index - 1, 0);
         rect = &application->file_selector_rect;
+
+        if(application->file_selected_index < application->file_selector_offset) {
+          application->file_selector_offset = application->file_selected_index;
+        }
+
       } else if(keycode == EDITOR_KEY_ENTER) {
         if(application->current_editor->file) {
           application->current_editor->file->cursor_saved = application->current_editor->cursor;
@@ -161,6 +176,7 @@ Application *application_create(BackBuffer *backbuffer) {
   element_set_user_element_destroy(&application->element, application_user_derstroy);
 
   application->file_selector = false;
+  application->file_selector_offset = 0;
 
   return application;
 }

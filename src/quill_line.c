@@ -1,4 +1,6 @@
 #include "quill_line.h"
+#include "quill_data_structures.h"
+
 extern Platform platform;
 
 Line *line_create(void) {
