@@ -3,17 +3,10 @@
 
 #include "quill.h"
 #include "quill_element.h"
+#include "quill_cursor.h"
 
 struct Painter;
 struct Line;
-
-typedef struct Cursor {
-  u32 col;
-  u32 save_col;
-  u32 line;
-} Cursor;
-
-void cursor_print(Cursor cursor);
 
 /* TODO: Get good keycodes for the editor keys */
 
@@ -60,8 +53,6 @@ typedef struct Editor {
 
   struct File *file;
 
-  //Rect file_rect;
-
   Cursor cursor;
   u32 col_offset;
   u32 line_offset;
@@ -83,6 +74,8 @@ void editor_cursor_remove(Editor *editor);
 void editor_cursor_remove_right(Editor *editor);
 void editor_remove_selection(Editor *editor);
 void editor_update_selected(Editor *editor, bool selected);
+
+bool editor_should_scroll(Editor *editor);
 
 bool editor_is_selected(Editor *editor, u32 line, u32 col);
 void editor_draw_lines(struct Painter *painter, Editor *editor, u32 start, u32 end);

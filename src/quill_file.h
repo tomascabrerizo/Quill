@@ -2,12 +2,15 @@
 #define _QUILL_FILE_H_
 
 #include "quill.h"
+#include "quill_cursor.h"
 
+/* TODO: Save in each file the cursor position for when the editor change files */
 #define FILE_MAX_NAME_SIZE 256
 typedef struct File {
   u8 name[FILE_MAX_NAME_SIZE];
   struct Line **buffer;
   struct Line *line_first_free;
+  Cursor cursor_saved;
 } File;
 
 File *file_create(u8 *filename);

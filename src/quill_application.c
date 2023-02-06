@@ -96,7 +96,16 @@ static int application_default_message_handler(struct Element *element, Message 
         application->file_selected_index = MAX((i32)application->file_selected_index - 1, 0);
         rect = &application->file_selector_rect;
       } else if(keycode == EDITOR_KEY_ENTER) {
-        application->current_editor->file = application->folder->files[application->file_selected_index];
+        if(application->current_editor->file) {
+          application->current_editor->file->cursor_saved = application->current_editor->cursor;
+        }
+        File *file = application->folder->files[application->file_selected_index];
+        application->current_editor->file = file;
+        application->current_editor->cursor = file->cursor_saved;
+        if(editor_should_scroll(application->current_editor)) {
+          rect = 0;
+        }
+
       }
       element_redraw(application, rect);
       element_update(application);
@@ -147,9 +156,12 @@ static void application_user_derstroy(Element *element) {
 
 Application *application_create(BackBuffer *backbuffer) {
   Application *application = (Application *)element_create(sizeof(Application), 0, application_default_message_handler);
+
   element_set_backbuffer(&application->element, backbuffer);
   element_set_user_element_destroy(&application->element, application_user_derstroy);
+
   application->file_selector = false;
+
   return application;
 }
 

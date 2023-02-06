@@ -3,6 +3,7 @@
 
 #include "quill.h"
 #include "quill_element.h"
+#include "quill_cursor.h"
 
 struct Editor;
 struct Folder;

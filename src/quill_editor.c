@@ -44,10 +44,6 @@ static inline Rect editor_get_cursor_line_rect(Editor *editor) {
   return rect;
 }
 
-void cursor_print(Cursor cursor) {
-  printf("line:%d, col:%d\n", cursor.line, cursor.col);
-}
-
 static int editor_default_message_handler(struct Element *element, Message message, void *data) {
   Editor *editor = (Editor *)element;
 
@@ -123,7 +119,7 @@ Editor *editor_create(Element *parent) {
   return editor;
 }
 
-static inline bool editor_should_scroll(Editor *editor) {
+bool editor_should_scroll(Editor *editor) {
   Cursor *cursor = &editor->cursor;
 
   u32 total_codepoints_view = element_get_width(editor) / platform.font->advance;

@@ -85,6 +85,21 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size);
 QUILL_PLATFORM_API void font_destroy(Font *font);
 Glyph *font_get_glyph(u16 codepoint);
 
+/* Quill Data structures */
+
+#define QUILL_DLL(typename) struct typename *next, *prev;
+
+/* NOTE: This is a Circular double link list and need to have a dummy object setup, pease dont forget to call dll_init */
+#define dll_init(node) ((node)->prev = (node), (node)->next = (node))
+
+#define dll_insert_front(node0, node1) \
+  ((node0)->next = (node1), (node0)->prev = (node1)->prev, \
+  (node0)->prev->next = (node0), (node0)->next->prev = (node0))
+
+#define dll_insert_back(node0, node1) \
+  ((node0)->prev = (node1), (node0)->next = (node1)->next, \
+  (node0)->prev->next = (node0), (node0)->next->prev = (node0))
+
 #define VECTOR_DEFAULT_CAPACITY 8
 
 typedef struct VectorHeader {
