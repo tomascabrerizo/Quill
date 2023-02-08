@@ -1,0 +1,42 @@
+#ifndef _QUILL_TOKENIZER_H_
+#define _QUILL_TOKENIZER_H_
+
+#include "quill.h"
+
+struct Line;
+
+typedef enum TokenType {
+  TOKEN_TYPE_WORD,
+  TOKEN_TYPE_KEYWORD,
+  TOKEN_TYPE_STRING,
+  TOKEN_TYPE_NUBER,
+  TOKEN_TYPE_COMMENT,
+  TOKEN_TPYE_PREPROCESSOR,
+
+  TOKEN_TYPE_COUNT,
+} TokenType;
+
+typedef struct Token {
+  TokenType type;
+  u32 start;
+  u32 end;
+} Token;
+
+typedef struct Tokenizer {
+  struct Line *line;
+  u32 current;
+  u32 size;
+} Tokenizer;
+
+Tokenizer tokenizer_init(struct Line *line);
+bool tokenizer_next_token(Tokenizer *tokenizer, Token *token);
+
+bool tokenizer_parse_number(Tokenizer *tokenizer, Token *token);
+bool tokenizer_parse_word(Tokenizer *tokenizer, Token *token);
+bool tokenizer_parse_string(Tokenizer *tokenizer, Token *token);
+bool tokenizer_parse_comment(Tokenizer *tokenizer, Token *token);
+bool tokenizer_parse_preprocessor(Tokenizer *tokenizer, Token *token);
+
+
+
+#endif /* _QUILL_TOKENIZER_H_ */

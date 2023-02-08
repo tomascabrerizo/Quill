@@ -77,6 +77,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
         editor_step_cursor_up(editor);
       } break;
       case EDITOR_KEY_DOWN: {
+        /* TODO: BUG: When scrolling down selection disappears */
         editor_update_selected(editor, mod == EDITOR_MOD_SHIFT);
         editor_step_cursor_down(editor);
       } break;
@@ -139,7 +140,6 @@ bool editor_should_scroll(Editor *editor) {
   u32 old_col_offset = editor->col_offset;
   if(total_codepoints_view) {
     if(cursor->col < editor->col_offset) {
-      //editor->col_offset = editor->col_offset - (editor->col_offset - cursor->col);
       editor->col_offset = cursor->col;
     } else if(cursor->col > (editor->col_offset + (total_codepoints_view - 1))) {
       editor->col_offset = cursor->col - (total_codepoints_view - 1);

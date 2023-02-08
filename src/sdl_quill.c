@@ -203,7 +203,7 @@ int main(void) {
 
   platform.data = (void *)window;
   platform.backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
-  platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 16);
+  platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);
 
   Application *application = application_create(platform.backbuffer);
   Editor *editor0 = editor_create(&application->element);
