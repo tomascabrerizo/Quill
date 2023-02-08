@@ -358,7 +358,8 @@ void editor_remove_selection(Editor *editor) {
 
   editor->selected = false;
   *cursor = start;
-  return;
+
+  element_redraw(editor, 0);
 }
 
 void editor_update_selected(Editor *editor, bool selected) {
@@ -366,8 +367,14 @@ void editor_update_selected(Editor *editor, bool selected) {
     editor->selected = true;
     editor->selection_mark = editor->cursor;
   } else if(!selected) {
+
+    if(editor->selected) {
+      element_redraw(editor, 0);
+    }
+
     editor->selected = false;
     editor->selection_mark = editor->cursor;
+
   }
 }
 
@@ -504,6 +511,8 @@ static void editor_draw_selection(Painter *painter, Editor *editor, u32 start, u
 
 void editor_draw(struct Painter *painter, Editor *editor) {
   Range lines = editor_rect_instersect_lines(editor, painter->clipping);
+
+  /* TODO: Refactor the rendering code this is really a hack to get it running */
 
   if(range_is_valid(lines)) {
     Rect rect = rect_intersection(painter->clipping, element_get_rect(editor));
