@@ -89,6 +89,11 @@ static int editor_default_message_handler(struct Element *element, Message messa
       case EDITOR_KEY_ENTER: {
         editor_cursor_insert_new_line(editor);
       } break;
+      case EDITOR_KEY_TAB: {
+        for(u32 i = 0; i < editor->tab_size; ++i) {
+          editor_cursor_insert(editor, ' ');
+        }
+      } break;
       }
 
       element_update(editor);
@@ -121,6 +126,7 @@ static void editor_user_element_destroy(Element *element) {
 Editor *editor_create(Element *parent) {
   Editor *editor = (Editor *)element_create(sizeof(Editor), parent, editor_default_message_handler);
   element_set_user_element_destroy(&editor->element, editor_user_element_destroy);
+  editor->tab_size = EDITOR_DEFAULT_TAB_SIZE;
   return editor;
 }
 
@@ -374,7 +380,6 @@ void editor_update_selected(Editor *editor, bool selected) {
 
     editor->selected = false;
     editor->selection_mark = editor->cursor;
-
   }
 }
 

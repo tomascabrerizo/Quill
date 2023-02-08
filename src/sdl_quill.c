@@ -251,6 +251,8 @@ int main(void) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DELETE);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_RETURN) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_ENTER);
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_TAB) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_TAB);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_P) {
         u32 keycode = EDITOR_KEY_P;
         if(e.key.keysym.mod & KMOD_CTRL) {

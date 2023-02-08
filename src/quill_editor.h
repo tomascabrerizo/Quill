@@ -33,6 +33,7 @@ typedef enum EditorMessageType {
   EDITOR_KEY_RETURN,
   EDITOR_KEY_ENTER,
   EDITOR_KEY_DELETE,
+  EDITOR_KEY_TAB,
 
   EDITOR_BUTTON_LEFT,
 
@@ -51,8 +52,12 @@ typedef union EditorMessage {
   ButtonMessage button;
 } EditorMessage;
 
+#define EDITOR_DEFAULT_TAB_SIZE 2
+
 typedef struct Editor {
   QUILL_ELEMENT
+
+  u32 tab_size;
 
   struct File *file;
 
