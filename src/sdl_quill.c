@@ -236,21 +236,15 @@ int main(void) {
 
     } else if(e.type == SDL_KEYDOWN) {
 
-      if((e.key.keysym.scancode == SDL_SCANCODE_RIGHT) ||
-         (e.key.keysym.scancode == SDL_SCANCODE_LEFT) ||
-         (e.key.keysym.scancode == SDL_SCANCODE_UP) ||
-         (e.key.keysym.scancode == SDL_SCANCODE_DOWN)) {
-        editor_update_selected(application->current_editor, e.key.keysym.mod & KMOD_SHIFT);
-      }
-
+      u32 shift = e.key.keysym.mod & KMOD_SHIFT;
       if(e.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RIGHT);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RIGHT | (shift ? EDITOR_MOD_SHIFT : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_LEFT) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_LEFT);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_LEFT | (shift ? EDITOR_MOD_SHIFT : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_UP) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_UP);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_UP | (shift ? EDITOR_MOD_SHIFT : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DOWN);
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DOWN | (shift ? EDITOR_MOD_SHIFT : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RETURN);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DELETE) {

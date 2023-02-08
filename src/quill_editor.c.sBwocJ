@@ -461,56 +461,12 @@ static inline Range editor_rect_instersect_lines(Editor *editor, Rect rect) {
   return range_invalid();
 }
 
-static void editor_draw_selection(Painter *painter, Editor *editor, u32 start, u32 end) {
-  File *file = editor->file;
-  if(!file) {
-    return;
-  }
-
-  Cursor start_selection = cursor_min(editor->cursor, editor->selection_mark);
-  Cursor end_selection = cursor_max(editor->cursor, editor->selection_mark);
-
-  start = MAX(start, start_selection.line - editor->line_offset);
-  end = MIN(end, end_selection.line - editor->line_offset);
-
-  for(u32 i = start; i <= end; ++i) {
-
-    /* TODO: Handle draw end of file outside this loop */
-    u32 line_index = i + editor->line_offset;
-    if(line_index >= file_line_count(file)) {
-      return;
-    }
-
-    u32 screen_x = element_get_rect(editor).l - editor->col_offset * platform.font->advance;
-    u32 screen_y = editor_line_to_screen_pos(editor, i) - platform.font->descender;
-
-    Line *line = file_get_line_at(file, line_index);
-    u32 size = line_size(line);
-    Rect line_rect = rect_create(screen_x, screen_x + size * platform.font->advance,
-                                 screen_y, screen_y + platform.font->line_gap);
-
-    if((line_index == start_selection.line) && (line_index == end_selection.line)) {
-      line_rect.l += start_selection.col * platform.font->advance;
-      line_rect.r -= (size - end_selection.col) * platform.font->advance;
-    } else if(line_index == start_selection.line) {
-      line_rect.l += start_selection.col * platform.font->advance;
-    } else if(line_index == end_selection.line) {
-      line_rect.r -= (size - end_selection.col) * platform.font->advance;
-    }
-
-    painter_draw_rect(painter, line_rect, 0x0000ff);
-  }
-}
-
 void editor_draw(struct Painter *painter, Editor *editor) {
   Range lines = editor_rect_instersect_lines(editor, painter->clipping);
 
   if(range_is_valid(lines)) {
     Rect rect = rect_intersection(painter->clipping, element_get_rect(editor));
     painter_draw_rect(painter, rect, 0x202020);
-    if(editor->selected) {
-      editor_draw_selection(painter, editor, lines.start, lines.end);
-    }
     editor_draw_lines(painter, editor, lines.start, lines.end);
     editor_draw_cursor(painter, editor);
   }

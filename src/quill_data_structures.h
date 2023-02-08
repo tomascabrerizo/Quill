@@ -27,7 +27,7 @@ typedef struct VectorHeader {
 
 void *vector_grow(void *vector, u32 element_size);
 
-#define vector_header(vector) ((VectorHeader *)((u8 *)(vector)-sizeof(VectorHeader)))
+#define vector_header(vector) ((VectorHeader *)((u8 *)(vector) - sizeof(VectorHeader)))
 
 #define vector_capacity(vector) ((vector) != 0 ? vector_header((vector))->capacity : 0)
 
