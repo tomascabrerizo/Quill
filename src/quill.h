@@ -22,6 +22,8 @@ typedef u8 bool;
 #define true 1
 #define false 0
 
+#define array_count(array) (sizeof((array)) / sizeof((array)[0]))
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 

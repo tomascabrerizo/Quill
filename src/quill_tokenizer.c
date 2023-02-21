@@ -1,6 +1,79 @@
 #include "quill_tokenizer.h"
 #include "quill_line.h"
 
+char *keyword_list[] = {
+  "u8",
+  "u16",
+  "u32",
+  "u64",
+
+  "i8",
+  "i16",
+  "i32",
+  "i64",
+
+  "int",
+  "float",
+  "double",
+
+  "typedef",
+  "struct",
+  "void",
+  "bool",
+  "static",
+  "inline",
+  "extern",
+
+  "switch",
+  "case",
+
+  "if",
+  "for",
+  "else",
+  "while",
+  "do",
+
+  "null",
+  "break",
+  "continue",
+  "size_t",
+  "goto",
+
+  "volatile"
+};
+
+static bool token_is_keyword(Token *token) {
+  u32 token_size = token->end - token->start;
+
+  for(u32 i = 0; i < array_count(keyword_list); ++i) {
+
+    char *keyword = keyword_list[i];
+    u32 keyword_size = strlen(keyword);
+
+    if(token_size != keyword_size) {
+      continue;
+    }
+
+    assert(token_size == keyword_size);
+
+    bool equals = true;
+    for(u32 j = 0; j < token_size; ++j) {
+      u32 token_codepoint = line_get_codepoint_at(token->line, token->start + j);
+      u32 keyword_copeponit = (u8)keyword[j];
+      if(token_codepoint != keyword_copeponit) {
+        equals = false;
+      }
+    }
+
+    if(equals) {
+      return true;
+    }
+
+  }
+
+  return false;
+}
+
 static char *token_type_to_string[TOKEN_TYPE_COUNT] = {
   "TOKEN_TYPE_UNKNOWN",
   "TOKEN_TYPE_WORD",
@@ -73,7 +146,7 @@ bool tokenizer_next_token(Tokenizer *tokenizer, Token *token) {
     case '6': case '7': case '8': case '9': case '0': {
       return tokenizer_parse_number(tokenizer, token);
     } break;
-
+#if 0
     case '.': {
       assert((tokenizer->current + 1) < tokenizer->size);
       u8 next_codepoint = line_get_codepoint_at(tokenizer->line, tokenizer->current + 1);
@@ -81,7 +154,7 @@ bool tokenizer_next_token(Tokenizer *tokenizer, Token *token) {
         tokenizer_parse_number(tokenizer, token);
       }
     } break;
-
+#endif
     /* TODO: Use a map to parse utf8 codepoints */
     case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i':
     case 'j': case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
@@ -98,15 +171,19 @@ bool tokenizer_next_token(Tokenizer *tokenizer, Token *token) {
     } break;
 
     case '/': {
-      assert((tokenizer->current + 1) < tokenizer->size);
-      u8 next_codepoint = line_get_codepoint_at(tokenizer->line, tokenizer->current + 1);
-      if(next_codepoint == '/') {
-        return tokenizer_parse_comment(tokenizer, token);
-      } else if (next_codepoint == '*') {
-        return tokenizer_parse_multiline_comment(tokenizer, token);
+      if((tokenizer->current + 1) < tokenizer->size) {
+        u8 next_codepoint = line_get_codepoint_at(tokenizer->line, tokenizer->current + 1);
+        if(next_codepoint == '/') {
+          return tokenizer_parse_comment(tokenizer, token);
+        } else if (next_codepoint == '*') {
+          return tokenizer_parse_multiline_comment(tokenizer, token);
+        } else {
+          return tokenizer_parse_unknown(tokenizer, token);
+        }
       } else {
         return tokenizer_parse_unknown(tokenizer, token);
       }
+
     } break;
     default: {
       return tokenizer_parse_unknown(tokenizer, token);
@@ -164,6 +241,13 @@ bool tokenizer_parse_word(Tokenizer *tokenizer, Token *token) {
   token->start = start;
   token->end = tokenizer->current;
   token->type = TOKEN_TYPE_WORD;
+
+  (void)token_is_keyword;
+#if 1
+  if(token_is_keyword(token)) {
+      token->type = TOKEN_TYPE_KEYWORD;
+  }
+#endif
 
   return true;
 }
