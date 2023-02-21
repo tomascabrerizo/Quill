@@ -1,5 +1,6 @@
 #include "quill_painter.h"
 #include "quill_line.h"
+#include "quill_tokenizer.h"
 
 extern Platform platform;
 
@@ -96,6 +97,36 @@ void painter_draw_text(Painter *painter, u8 *text, u32 size, i32 x, i32 y, u32 c
   }
 }
 
+void painter_draw_token(Painter *painter, Token *token, i32 x, i32 y, u32 color) {
+  switch(token->type) {
+  case TOKEN_TYPE_WORD: { color = color; } break;
+  case TOKEN_TYPE_KEYWORD: { color = color; } break;
+  case TOKEN_TYPE_STRING: { color = 0x888800; } break;
+  case TOKEN_TYPE_NUBER: { color = 0x00ff00; } break;
+  case TOKEN_TYPE_COMMENT: { color = 0x666666; } break;
+  default: {} break;
+  }
+
+  for(u32 i = token->start; i < token->end; ++i) {
+    u8 codepoint = line_get_codepoint_at(token->line, i);
+    Glyph *glyph = &painter->font->glyph_table[codepoint];
+    painter_draw_glyph(painter, glyph, x, y, color);
+    x += platform.font->advance;
+  }
+
+}
+
+#if 1
+void painter_draw_line(Painter *painter, struct Line *line, i32 x, i32 y, u32 color) {
+  Tokenizer tokenizer = tokenizer_init(line);
+  Token token;
+  while(tokenizer_next_token(&tokenizer, &token)) {
+    token_print(token);
+    painter_draw_token(painter, &token, x, y, color);
+    x += (token.end - token.start) * platform.font->advance;
+  }
+}
+#elif
 void painter_draw_line(Painter *painter, struct Line *line, i32 x, i32 y, u32 color) {
   for(u32 i = 0; i < line_size(line); ++i) {
     u8 codepoint = line_get_codepoint_at(line, i);
@@ -104,3 +135,4 @@ void painter_draw_line(Painter *painter, struct Line *line, i32 x, i32 y, u32 co
     x += platform.font->advance;
   }
 }
+#endif

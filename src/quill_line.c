@@ -69,7 +69,6 @@ void line_copy_at(Line *des, Line *src, u32 count, u32 index) {
   }
 }
 
-
 u8 line_get_codepoint_at(Line *line, u32 index) {
   /* TODO: Make this iterator a macro to use in all gap buffers */
   assert(index < gapbuffer_size(line->buffer));

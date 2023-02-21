@@ -43,6 +43,7 @@ bool tokenizer_next_token(Tokenizer *tokenizer, Token *token);
 bool tokenizer_parse_number(Tokenizer *tokenizer, Token *token);
 bool tokenizer_parse_word(Tokenizer *tokenizer, Token *token);
 bool tokenizer_parse_string(Tokenizer *tokenizer, Token *token);
+bool tokenizer_parse_multiline_comment(Tokenizer *tokenizer, Token *token);
 bool tokenizer_parse_comment(Tokenizer *tokenizer, Token *token);
 bool tokenizer_parse_unknown(Tokenizer *tokenizer, Token *token);
 

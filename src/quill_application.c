@@ -115,15 +115,6 @@ static int application_default_message_handler(struct Element *element, Message 
       } else if(keycode == EDITOR_KEY_ENTER) {
         if(application->current_editor->file) {
           application->current_editor->file->cursor_saved = application->current_editor->cursor;
-
-          /* NOTE: Tokenizer test */
-          Line *line = file_get_line_at(application->current_editor->file, application->current_editor->cursor.line);
-          Tokenizer tokenizer = tokenizer_init(line);
-          Token token;
-          while(tokenizer_next_token(&tokenizer, &token)) {
-            token_print(token);
-          }
-
         }
         File *file = application->folder->files[application->file_selected_index];
         application->current_editor->file = file;

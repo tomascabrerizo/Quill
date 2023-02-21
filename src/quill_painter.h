@@ -4,6 +4,7 @@
 #include "quill.h"
 
 struct Line;
+struct Tokenizer;
 
 typedef struct Painter {
   u32 *pixels;

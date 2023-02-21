@@ -82,6 +82,11 @@ void *gapbuffer_grow(void *buffer, u32 element_size);
 
 #define gapbuffer_get_at_gap(buffer) ((buffer)[gapbuffer_f_index((buffer))-1])
 
+#define gapbuffer_at(buffer, index) \
+  (((index) > gapbuffer_f_index((buffer))) ? \
+  (buffer)[index + (gapbuffer_s_index((buffer)) - gapbuffer_f_index((buffer)))] : \
+  (buffer)[index])
+
 #define gapbuffer_move_to(buffer, index) \
   do {\
   if(index != gapbuffer_f_index(buffer)) { \
