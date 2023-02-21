@@ -12,9 +12,11 @@ char *keyword_list[] = {
   "i32",
   "i64",
 
+  "char",
   "int",
   "float",
   "double",
+  "unsigned",
 
   "typedef",
   "struct",
@@ -26,6 +28,7 @@ char *keyword_list[] = {
 
   "switch",
   "case",
+  "default",
 
   "if",
   "for",
@@ -38,6 +41,7 @@ char *keyword_list[] = {
   "continue",
   "size_t",
   "goto",
+  "return",
 
   "volatile"
 };
@@ -198,7 +202,14 @@ bool tokenizer_parse_number(Tokenizer *tokenizer, Token *token) {
   u32 start = tokenizer->current;
   u8 codepoint = line_get_codepoint_at(tokenizer->line, tokenizer->current);
 
-  while((is_digit(codepoint)) || (codepoint == '.')) {
+  while((is_digit(codepoint)) || (codepoint == '.') ||
+        (codepoint == 'x') || (codepoint == 'b') ||
+        (codepoint == 'a') ||
+        (codepoint == 'b') ||
+        (codepoint == 'c') ||
+        (codepoint == 'd') ||
+        (codepoint == 'e') ||
+        (codepoint == 'f')) {
     ++tokenizer->current;
     if(tokenizer->current == tokenizer->size) {
       break;

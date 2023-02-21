@@ -103,7 +103,7 @@ void painter_draw_token(Painter *painter, Token *token, i32 x, i32 y, u32 color)
   switch(token->type) {
   case TOKEN_TYPE_WORD: { color = color; } break;
   case TOKEN_TYPE_KEYWORD: { color = 0xbb8800; } break;
-  case TOKEN_TYPE_STRING: { color = 0x888800; } break;
+  case TOKEN_TYPE_STRING: { color = 0x66aa00; } break;
   case TOKEN_TYPE_NUBER: { color = 0x00ff00; } break;
   case TOKEN_TYPE_COMMENT: { color = 0x666666; } break;
   default: {} break;
