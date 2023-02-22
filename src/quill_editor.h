@@ -21,6 +21,8 @@ struct Line;
 #define EDITOR_MOD_CRTL_RIGHT 0x10000000
 #define EDITOR_MOD_CRTL (EDITOR_MOD_CRTL_RIGHT|EDITOR_MOD_CRTL_LEFT)
 
+#define EDITOR_MOD_IS_SET(mod, mod_type) (bool)((mod & mod_type) > 0)
+
 #define EDITOR_MESSAGE EditorMessageType type;
 
 /* TODO: Define this structures in quill_message.h */
@@ -72,10 +74,15 @@ typedef struct Editor {
 
 struct Editor *editor_create(Element *parent);
 
+
 void editor_step_cursor_right(Editor *editor);
 void editor_step_cursor_left(Editor *editor);
 void editor_step_cursor_up(Editor *editor);
 void editor_step_cursor_down(Editor *editor);
+
+void editor_step_next_token_left(Editor *editor);
+void editor_step_next_token_right(Editor *editor);
+
 void editor_cursor_insert(Editor *editor, u8 codepoint);
 void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);

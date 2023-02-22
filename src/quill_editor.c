@@ -55,7 +55,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
   case MESSAGE_DRAW_ON_TOP: {
 
   } break;
-  case MESSAGE_RESIZE: {
+case MESSAGE_RESIZE: {
 
   } break;
   case MESSAGE_KEYDOWN: {
@@ -63,22 +63,31 @@ static int editor_default_message_handler(struct Element *element, Message messa
     if(editor->file) {
       u32 mod = (u32)((u64)data) & EDITOR_MOD_MASK;
       u32 key = (u32)((u64)data) & EDITOR_KEY_MASK;
+
       switch(key) {
       case EDITOR_KEY_LEFT: {
-        editor_update_selected(editor, mod == EDITOR_MOD_SHIFT);
-        editor_step_cursor_left(editor);
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
+        if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
+          editor_step_next_token_left(editor);
+        } else {
+          editor_step_cursor_left(editor);
+        }
       } break;
       case EDITOR_KEY_RIGHT: {
-        editor_update_selected(editor, mod == EDITOR_MOD_SHIFT);
-        editor_step_cursor_right(editor);
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
+        if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
+          editor_step_next_token_right(editor);
+        } else {
+          editor_step_cursor_right(editor);
+        }
       } break;
       case EDITOR_KEY_UP: {
-        editor_update_selected(editor, mod == EDITOR_MOD_SHIFT);
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
         editor_step_cursor_up(editor);
       } break;
       case EDITOR_KEY_DOWN: {
         /* TODO: BUG: When scrolling down selection disappears */
-        editor_update_selected(editor, mod == EDITOR_MOD_SHIFT);
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
         editor_step_cursor_down(editor);
       } break;
       case EDITOR_KEY_RETURN: {
@@ -232,6 +241,101 @@ void editor_step_cursor_down(Editor *editor) {
   bool scroll = editor_should_scroll(editor);
   element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
+
+
+static inline bool codepoint_is_separator(u8 codepoint) {
+  return (codepoint == ',') || (codepoint == ';') || (codepoint == '.') ||
+      (codepoint == '-') || (codepoint == '_') || (codepoint == '>') ||
+      (codepoint == '(') || (codepoint == ')') || (codepoint == ' ');
+}
+
+void editor_step_next_token_left(Editor *editor) {
+  Line *line = file_get_line_at(editor->file, editor->cursor.line);
+  if(editor->cursor.col > 0) {
+
+    if(editor->cursor.col == line_size(line)) {
+      editor_step_cursor_left(editor);
+    }
+
+    u8 codepoint = line_get_codepoint_at(line, editor->cursor.col);
+    u8 left_codepoint = line_get_codepoint_at(line, editor->cursor.col - 1);
+    if(codepoint_is_separator(left_codepoint)) {
+      editor_step_cursor_left(editor);
+      codepoint = line_get_codepoint_at(line, editor->cursor.col);
+    }
+
+    if(codepoint == ' ') {
+      while(editor->cursor.col > 0) {
+        editor_step_cursor_left(editor);
+
+        if(editor->cursor.col == 0) {
+          return;
+        }
+
+        u8 codepoint = line_get_codepoint_at(line, editor->cursor.col);
+        if(codepoint != ' ') {
+          break;
+        }
+      }
+    }
+
+    for(;;) {
+      editor_step_cursor_left(editor);
+      if(editor->cursor.col == 0) {
+        return;
+      }
+
+      u8 codepoint = line_get_codepoint_at(line, editor->cursor.col);
+
+      if(codepoint_is_separator(codepoint)) {
+        editor_step_cursor_right(editor);
+        return;
+      }
+    }
+
+  } else {
+    editor_step_cursor_left(editor);
+  }
+}
+
+void editor_step_next_token_right(Editor *editor) {
+  Line *line = file_get_line_at(editor->file, editor->cursor.line);
+  if(editor->cursor.col < (line_size(line))) {
+
+    u8 codepoint = line_get_codepoint_at(line, editor->cursor.col);
+    if(codepoint == ' ') {
+      while(editor->cursor.col < line_size(line)) {
+        editor_step_cursor_right(editor);
+
+        if(editor->cursor.col == line_size(line)) {
+          return;
+        }
+
+        u8 codepoint = line_get_codepoint_at(line, editor->cursor.col);
+        if(codepoint != ' ') {
+          break;
+        }
+      }
+    }
+
+    for(;;) {
+      editor_step_cursor_right(editor);
+      if(editor->cursor.col == line_size(line)) {
+        return;
+      }
+
+      u8 codepoint = line_get_codepoint_at(line, editor->cursor.col);
+
+      if(codepoint_is_separator(codepoint)) {
+        return;
+      }
+    }
+
+  } else {
+    editor_step_cursor_right(editor);
+  }
+}
+
 
 void editor_cursor_insert(Editor *editor, u8 codepoint) {
   File *file = editor->file;

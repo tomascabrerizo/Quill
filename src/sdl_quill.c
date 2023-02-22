@@ -237,14 +237,24 @@ int main(void) {
     } else if(e.type == SDL_KEYDOWN) {
 
       u32 shift = e.key.keysym.mod & KMOD_SHIFT;
+      u32 ctrl = e.key.keysym.mod & KMOD_CTRL;
+
       if(e.key.keysym.scancode == SDL_SCANCODE_RIGHT) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RIGHT | (shift ? EDITOR_MOD_SHIFT : 0));
+        element_message(application, MESSAGE_KEYDOWN, (EDITOR_KEY_RIGHT |
+                        (shift ? EDITOR_MOD_SHIFT : 0) |
+                        (ctrl ? EDITOR_MOD_CRTL : 0)));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_LEFT) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_LEFT | (shift ? EDITOR_MOD_SHIFT : 0));
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_LEFT |
+                        (shift ? EDITOR_MOD_SHIFT : 0) |
+                        (ctrl ? EDITOR_MOD_CRTL : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_UP) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_UP | (shift ? EDITOR_MOD_SHIFT : 0));
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_UP |
+                        (shift ? EDITOR_MOD_SHIFT : 0) |
+                        (ctrl ? EDITOR_MOD_CRTL : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DOWN) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DOWN | (shift ? EDITOR_MOD_SHIFT : 0));
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_DOWN |
+                        (shift ? EDITOR_MOD_SHIFT : 0) |
+                        (ctrl ? EDITOR_MOD_CRTL : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_BACKSPACE) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_RETURN);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_DELETE) {
