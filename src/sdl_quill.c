@@ -263,6 +263,14 @@ int main(void) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_ENTER);
       } else if(e.key.keysym.scancode == SDL_SCANCODE_TAB) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_TAB);
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_HOME) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_HOME|(shift ? EDITOR_MOD_SHIFT : 0));
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_END) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_END|(shift ? EDITOR_MOD_SHIFT : 0));
+      }else if(e.key.keysym.scancode == SDL_SCANCODE_PAGEUP) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_PAGE_UP|(shift ? EDITOR_MOD_SHIFT : 0));
+      } else if(e.key.keysym.scancode == SDL_SCANCODE_PAGEDOWN) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_PAGE_DOWN|(shift ? EDITOR_MOD_SHIFT : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_P) {
         u32 keycode = EDITOR_KEY_P;
         if(e.key.keysym.mod & KMOD_CTRL) {

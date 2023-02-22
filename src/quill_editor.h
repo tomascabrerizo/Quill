@@ -36,6 +36,10 @@ typedef enum EditorMessageType {
   EDITOR_KEY_ENTER,
   EDITOR_KEY_DELETE,
   EDITOR_KEY_TAB,
+  EDITOR_KEY_HOME,
+  EDITOR_KEY_END,
+  EDITOR_KEY_PAGE_UP,
+  EDITOR_KEY_PAGE_DOWN,
 
   EDITOR_BUTTON_LEFT,
 
@@ -80,8 +84,14 @@ void editor_step_cursor_left(Editor *editor);
 void editor_step_cursor_up(Editor *editor);
 void editor_step_cursor_down(Editor *editor);
 
+void editor_step_cursor_page_down(Editor *editor);
+void editor_step_cursor_page_up(Editor *editor);
+
 void editor_step_next_token_left(Editor *editor);
 void editor_step_next_token_right(Editor *editor);
+
+void editor_step_cursor_start(Editor *editor);
+void editor_step_cursor_end(Editor *editor);
 
 void editor_cursor_insert(Editor *editor, u8 codepoint);
 void editor_cursor_insert_new_line(Editor *editor);

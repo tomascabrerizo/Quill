@@ -90,6 +90,22 @@ case MESSAGE_RESIZE: {
         editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
         editor_step_cursor_down(editor);
       } break;
+      case EDITOR_KEY_HOME: {
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
+        editor_step_cursor_start(editor);
+      } break;
+      case EDITOR_KEY_END: {
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
+        editor_step_cursor_end(editor);
+      } break;
+      case EDITOR_KEY_PAGE_DOWN: {
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
+        editor_step_cursor_page_down(editor);
+      } break;
+      case EDITOR_KEY_PAGE_UP: {
+        editor_update_selected(editor, EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT));
+        editor_step_cursor_page_up(editor);
+      } break;
       case EDITOR_KEY_RETURN: {
         editor_cursor_remove(editor);
       } break;
@@ -242,6 +258,49 @@ void editor_step_cursor_down(Editor *editor) {
   element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
 }
 
+float page_percentage = 0.7f;
+
+void editor_step_cursor_page_down(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+  u32 step = MIN((u32)((float)editor_max_visible_lines(editor)*page_percentage), (file_line_count(file) - cursor->line));
+  for(u32 i = 0; i < step; ++i) {
+    editor_step_cursor_down(editor);
+  }
+}
+
+void editor_step_cursor_page_up(Editor *editor) {
+  Cursor *cursor = &editor->cursor;
+  u32 step = MIN((u32)((float)editor_max_visible_lines(editor)*page_percentage), cursor->line);
+  for(u32 i = 0; i < step; ++i) {
+    editor_step_cursor_up(editor);
+  }
+}
+
+void editor_step_cursor_start(Editor *editor) {
+  Cursor *cursor = &editor->cursor;
+
+  Rect rect = editor_get_cursor_line_rect(editor);
+
+  cursor->col = 0;
+  cursor->save_col = cursor->col;
+
+  bool scroll = editor_should_scroll(editor);
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
+}
+
+void editor_step_cursor_end(Editor *editor) {
+  File *file = editor->file;
+  Cursor *cursor = &editor->cursor;
+
+  Rect rect = editor_get_cursor_line_rect(editor);
+
+  cursor->col = line_size(file_get_line_at(file, cursor->line));
+  cursor->save_col = cursor->col;
+
+  bool scroll = editor_should_scroll(editor);
+  element_redraw(editor, scroll ? &element_get_rect(editor) : &rect);
+}
 
 static inline bool codepoint_is_separator(u8 codepoint) {
   return (codepoint == ',') || (codepoint == ';') || (codepoint == '.') ||
