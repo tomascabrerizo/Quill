@@ -3,13 +3,13 @@
 
 Platform platform;
 
-QUILL_PLATFORM_API void platform_clipboard_push(Platform *platform, u8 value) {
-  vector_push(platform->clipboard, value);
+QUILL_PLATFORM_API void platform_temp_clipboard_push(Platform *platform, u8 value) {
+  vector_push(platform->temp_clipboard, value);
 }
 
-QUILL_PLATFORM_API void platform_clipboard_clear(Platform *platform) {
-  if(vector_size(platform->clipboard) > 0) {
-    VectorHeader *header = vector_header(platform->clipboard);
+QUILL_PLATFORM_API void platform_temp_clipboard_clear(Platform *platform) {
+  if(vector_size(platform->temp_clipboard) > 0) {
+    VectorHeader *header = vector_header(platform->temp_clipboard);
     header->size = 0;
   }
 }

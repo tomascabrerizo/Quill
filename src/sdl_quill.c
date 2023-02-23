@@ -41,6 +41,23 @@ void freetype_shutdow() {
 
 /* NOTE: Function from the platform to the program */
 
+QUILL_PLATFORM_API u8 *platform_get_clipboard() {
+  char * clipborad = SDL_GetClipboardText();
+  printf("string = %s\n", clipborad);
+  return (u8 *)clipborad;
+}
+
+QUILL_PLATFORM_API void platform_free_clipboard(u8 *buffer) {
+  SDL_free((char *)buffer);
+}
+
+QUILL_PLATFORM_API void platform_set_clipboard(u8 *buffer) {
+  if(SDL_SetClipboardText((const char *)buffer) < 0) {
+    printf("Cannot set clipboard\n");
+    exit(-1);
+  }
+}
+
 QUILL_PLATFORM_API Folder *platform_load_folder(u8 *foldername) {
   Folder *folder = folder_create(foldername);
 
@@ -201,7 +218,7 @@ int main(void) {
   assert(window_surface->format->BytesPerPixel == 4);
   assert(window_surface->format->format == SDL_PIXELFORMAT_RGB888);
 
-  platform.clipboard = 0;
+  platform.temp_clipboard = 0;
   platform.data = (void *)window;
   platform.backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
   platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);
@@ -277,6 +294,10 @@ int main(void) {
 
       else if(e.key.keysym.scancode == SDL_SCANCODE_C) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_C|(ctrl ? EDITOR_MOD_CRTL : 0));
+      }
+
+      else if(e.key.keysym.scancode == SDL_SCANCODE_V) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_V|(ctrl ? EDITOR_MOD_CRTL : 0));
       }
 
       else if(e.key.keysym.scancode == SDL_SCANCODE_P) {

@@ -47,13 +47,7 @@ Rect rect_intersection(Rect a, Rect b);
 Rect rect_union(Rect a, Rect b);
 void rect_print(Rect rect);
 
-typedef struct ByteArray {
-  u8 *data;
-  u32 size;
-} ByteArray;
 
-QUILL_PLATFORM_API ByteArray load_entire_file(u8 *filename);
-QUILL_PLATFORM_API struct Folder *platform_load_folder(u8 *foldername);
 
 typedef struct BackBuffer {
   u32 *pixels;
@@ -87,18 +81,31 @@ QUILL_PLATFORM_API Font *font_load_from_file(u8 *filename, u32 font_size);
 QUILL_PLATFORM_API void font_destroy(Font *font);
 Glyph *font_get_glyph(u16 codepoint);
 
+typedef struct ByteArray {
+  u8 *data;
+  u32 size;
+} ByteArray;
+
+QUILL_PLATFORM_API ByteArray load_entire_file(u8 *filename);
+QUILL_PLATFORM_API struct Folder *platform_load_folder(u8 *foldername);
+
 typedef struct Platform {
   BackBuffer *backbuffer;
   u32 mouse_pos_x;
   u32 mouse_pos_y;
   Font *font;
-  u8 *clipboard;
+  u8 *temp_clipboard;
   void *data;
 } Platform;
 
+QUILL_PLATFORM_API u8 *platform_get_clipboard();
+QUILL_PLATFORM_API void platform_free_clipboard(u8 *buffer);
+QUILL_PLATFORM_API void platform_set_clipboard(u8 *buffer);
+
 QUILL_PLATFORM_API void platform_end_draw(BackBuffer *backbuffer);
-QUILL_PLATFORM_API void platform_clipboard_push(Platform *platform, u8 value);
-QUILL_PLATFORM_API void platform_clipboard_clear(Platform *platform);
+QUILL_PLATFORM_API void platform_temp_clipboard_push(Platform *platform, u8 value);
+QUILL_PLATFORM_API void platform_temp_clipboard_clear(Platform *platform);
+
 
 
 #endif /* _QUILL_H_ */

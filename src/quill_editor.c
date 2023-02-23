@@ -2,6 +2,7 @@
 #include "quill_line.h"
 #include "quill_file.h"
 #include "quill_painter.h"
+#include "quill_data_structures.h"
 
 extern Platform platform;
 
@@ -121,8 +122,16 @@ case MESSAGE_RESIZE: {
         }
       } break;
       case EDITOR_KEY_C: {
-        editor_copy_selection_to_clipboard(editor);
+        if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
+          editor_copy_selection_to_clipboard(editor);
+        }
       } break;
+      case EDITOR_KEY_V: {
+        if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
+          editor_paste_clipboard(editor);
+        }
+      } break;
+
       }
 
       element_update(editor);
@@ -503,11 +512,28 @@ static inline void line_remove_range(Line *line, u32 start, u32 end) {
   }
 }
 
+void editor_paste_clipboard(Editor *editor) {
+  u8 *clipboard = platform_get_clipboard();
+  u8 *iterator = clipboard;
+  for(;;) {
+    u8 codepoint = *iterator++;
+    if(codepoint == '\0') {
+      break;
+    }
+    if(codepoint == '\n') {
+      editor_cursor_insert_new_line(editor);
+      continue;
+    }
+    editor_cursor_insert(editor, codepoint);
+  }
+  platform_free_clipboard(clipboard);
+}
+
 void editor_copy_selection_to_clipboard(Editor *editor) {
   if(editor->selected) {
     File *file = editor->file;
     Cursor *cursor = &editor->cursor;
-    platform_clipboard_clear(&platform);
+    platform_temp_clipboard_clear(&platform);
 
     Cursor start = cursor_min(editor->cursor, editor->selection_mark);
     Cursor end = cursor_max(editor->cursor, editor->selection_mark);
@@ -517,28 +543,28 @@ void editor_copy_selection_to_clipboard(Editor *editor) {
       u32 size = line_size(line);
       if(start.line == end.line) {
         for(u32 j = start.col; j < end.col; ++j) {
-          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
         }
       } else if(i == start.line) {
         for(u32 j = start.col; j < size; ++j) {
-          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
         }
       } else if(i == end.line) {
         for(u32 j = 0; j < end.col; ++j) {
-          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
         }
       } else {
         for(u32 j = 0; j < size; ++j) {
-          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
         }
       }
       if(i < end.line) {
-        platform_clipboard_push(&platform, '\n');
+        platform_temp_clipboard_push(&platform, '\n');
       }
     }
-    platform_clipboard_push(&platform, '\0');
+    platform_temp_clipboard_push(&platform, '\0');
+    platform_set_clipboard(platform.temp_clipboard);
 
-    printf("(%s) was copied\n", (char *)platform.clipboard);
     editor->selected = false;
     *cursor = start;
 
