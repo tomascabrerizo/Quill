@@ -20,6 +20,7 @@ char *keyword_list[] = {
 
   "typedef",
   "struct",
+  "enum",
   "void",
   "bool",
   "static",

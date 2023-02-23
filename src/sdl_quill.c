@@ -43,7 +43,6 @@ void freetype_shutdow() {
 
 QUILL_PLATFORM_API u8 *platform_get_clipboard() {
   char * clipborad = SDL_GetClipboardText();
-  printf("string = %s\n", clipborad);
   return (u8 *)clipborad;
 }
 
@@ -205,6 +204,7 @@ QUILL_PLATFORM_API void platform_end_draw(BackBuffer *backbuffer) {
 /* NOTE: Each platfrom need its main function */
 
 int main(void) {
+
   /* NOTE: Window and Bacbuffer initialization */
   SDL_Init(SDL_INIT_VIDEO);
   SDL_Window *window = SDL_CreateWindow("Quill", 100, 100, 640, 480, SDL_WINDOW_RESIZABLE);

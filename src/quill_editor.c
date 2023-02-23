@@ -317,7 +317,8 @@ void editor_step_cursor_end(Editor *editor) {
 static inline bool codepoint_is_separator(u8 codepoint) {
   return (codepoint == ',') || (codepoint == ';') || (codepoint == '.') ||
       (codepoint == '-') || (codepoint == '_') || (codepoint == '>') ||
-      (codepoint == '(') || (codepoint == ')') || (codepoint == ' ');
+      (codepoint == '(') || (codepoint == ')') || (codepoint == ' ') ||
+      (codepoint == '/') || (codepoint == '\\');
 }
 
 void editor_step_next_token_left(Editor *editor) {
@@ -407,8 +408,10 @@ void editor_step_next_token_right(Editor *editor) {
   }
 }
 
-
 void editor_cursor_insert(Editor *editor, u8 codepoint) {
+  if(editor->selected) {
+    editor_remove_selection(editor);
+  }
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));

@@ -4,13 +4,41 @@
 #include "quill.h"
 #include "quill_cursor.h"
 
-/* TODO: Save in each file the cursor position for when the editor change files */
+typedef enum FileCommandType {
+  FILE_COMMAND_INSERT,
+  FILE_COMMAND_REMOVE,
+} FileCommandType;
+
+typedef struct FileCommand {
+  FileCommandType type;
+  Cursor start;
+  Cursor end;
+  u8 *text;
+} FileCommand;
+
+#define FILE_MAX_UNDO_REDO_SIZE 256
+typedef struct FileCommandStack {
+  FileCommand commands[FILE_MAX_UNDO_REDO_SIZE];
+  u32 top;
+  u32 size;
+} FileCommandStack;
+
+FileCommandStack *file_command_stack_create();
+void file_command_stack_destroy(FileCommandStack *stack);
+FileCommand *file_command_stack_push(FileCommandStack *stack);
+FileCommand *file_command_stack_pop(FileCommandStack *stack);
+
 #define FILE_MAX_NAME_SIZE 256
 typedef struct File {
+
   u8 name[FILE_MAX_NAME_SIZE];
   struct Line **buffer;
   struct Line *line_first_free;
   Cursor cursor_saved;
+
+  FileCommandStack *undo_stack;
+  FileCommandStack *redo_stack;
+
 } File;
 
 File *file_create(u8 *filename);
@@ -27,6 +55,9 @@ void file_remove_line_at(File *file, u32 index);
 void file_print(File *file);
 struct Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
+
+void file_undo_command_start(File *file, FileCommandType type);
+void file_undo_command_end(FileCommandType type);
 
 #define FOLDER_MAX_NAME_SIZE 256
 typedef struct Folder {

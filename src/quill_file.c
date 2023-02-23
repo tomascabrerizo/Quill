@@ -4,6 +4,39 @@
 
 extern Platform platform;
 
+FileCommandStack *file_command_stack_create() {
+  FileCommandStack *stack = (FileCommandStack *)malloc(sizeof(FileCommandStack));
+  memset(stack, 0, sizeof(FileCommandStack));
+  return stack;
+}
+
+void file_command_stack_destroy(FileCommandStack *stack) {
+  for(u32 i = 0; i < FILE_MAX_UNDO_REDO_SIZE; ++i) {
+    vector_free(stack->commands[i].text);
+  }
+  free(stack);
+}
+
+FileCommand *file_command_stack_push(FileCommandStack *stack) {
+  assert(stack->size <= FILE_MAX_UNDO_REDO_SIZE);
+  assert(stack->top < FILE_MAX_UNDO_REDO_SIZE);
+  FileCommand *command = &stack->commands[stack->top];
+  stack->top = (stack->top + 1) % FILE_MAX_UNDO_REDO_SIZE;
+  stack->size += (stack->size < FILE_MAX_UNDO_REDO_SIZE);
+  return command;
+}
+
+FileCommand *file_command_stack_pop(FileCommandStack *stack) {
+  assert(stack->size > 0);
+  --stack->top;
+  if(((i32)stack->top) < 0) {
+    stack->top = FILE_MAX_UNDO_REDO_SIZE - 1;
+  }
+  FileCommand *command = &stack->commands[stack->top];
+  stack->size--;
+  return command;
+}
+
 File *file_create(u8 *filename) {
   File *file = (File *)malloc(sizeof(File));
   memset(file, 0, sizeof(File));
