@@ -120,6 +120,9 @@ case MESSAGE_RESIZE: {
           editor_cursor_insert(editor, ' ');
         }
       } break;
+      case EDITOR_KEY_C: {
+        editor_copy_selection_to_clipboard(editor);
+      } break;
       }
 
       element_update(editor);
@@ -497,6 +500,50 @@ static inline void line_remove_range(Line *line, u32 start, u32 end) {
   u32 remove_cout = end - start;
   for(u32 i = 0; i < remove_cout; ++i) {
     line_remove_at_index(line, start + 1);
+  }
+}
+
+void editor_copy_selection_to_clipboard(Editor *editor) {
+  if(editor->selected) {
+    File *file = editor->file;
+    Cursor *cursor = &editor->cursor;
+    platform_clipboard_clear(&platform);
+
+    Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+    Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+
+    for(u32 i = start.line; i <= end.line; ++i) {
+      Line *line = file_get_line_at(file, i);
+      u32 size = line_size(line);
+      if(start.line == end.line) {
+        for(u32 j = start.col; j < end.col; ++j) {
+          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+        }
+      } else if(i == start.line) {
+        for(u32 j = start.col; j < size; ++j) {
+          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+        }
+      } else if(i == end.line) {
+        for(u32 j = 0; j < end.col; ++j) {
+          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+        }
+      } else {
+        for(u32 j = 0; j < size; ++j) {
+          platform_clipboard_push(&platform, line_get_codepoint_at(line, j));
+        }
+      }
+      if(i < end.line) {
+        platform_clipboard_push(&platform, '\n');
+      }
+    }
+    platform_clipboard_push(&platform, '\0');
+
+    printf("(%s) was copied\n", (char *)platform.clipboard);
+    editor->selected = false;
+    *cursor = start;
+
+    element_redraw(editor, 0);
+
   }
 }
 

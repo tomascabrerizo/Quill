@@ -201,9 +201,11 @@ int main(void) {
   assert(window_surface->format->BytesPerPixel == 4);
   assert(window_surface->format->format == SDL_PIXELFORMAT_RGB888);
 
+  platform.clipboard = 0;
   platform.data = (void *)window;
   platform.backbuffer = backbuffer_create(window_surface->w, window_surface->h, window_surface->format->BytesPerPixel);
   platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 14);
+  //platform.font = font_load_from_file((u8 *)"/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", 14);
 
   Application *application = application_create(platform.backbuffer);
   Editor *editor0 = editor_create(&application->element);
@@ -271,7 +273,13 @@ int main(void) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_PAGE_UP|(shift ? EDITOR_MOD_SHIFT : 0));
       } else if(e.key.keysym.scancode == SDL_SCANCODE_PAGEDOWN) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_PAGE_DOWN|(shift ? EDITOR_MOD_SHIFT : 0));
-      } else if(e.key.keysym.scancode == SDL_SCANCODE_P) {
+      }
+
+      else if(e.key.keysym.scancode == SDL_SCANCODE_C) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_C|(ctrl ? EDITOR_MOD_CRTL : 0));
+      }
+
+      else if(e.key.keysym.scancode == SDL_SCANCODE_P) {
         u32 keycode = EDITOR_KEY_P;
         if(e.key.keysym.mod & KMOD_CTRL) {
           keycode |= EDITOR_MOD_CRTL;

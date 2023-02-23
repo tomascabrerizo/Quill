@@ -92,9 +92,13 @@ typedef struct Platform {
   u32 mouse_pos_x;
   u32 mouse_pos_y;
   Font *font;
+  u8 *clipboard;
   void *data;
 } Platform;
 
 QUILL_PLATFORM_API void platform_end_draw(BackBuffer *backbuffer);
+QUILL_PLATFORM_API void platform_clipboard_push(Platform *platform, u8 value);
+QUILL_PLATFORM_API void platform_clipboard_clear(Platform *platform);
+
 
 #endif /* _QUILL_H_ */

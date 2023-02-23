@@ -41,6 +41,9 @@ typedef enum EditorMessageType {
   EDITOR_KEY_PAGE_UP,
   EDITOR_KEY_PAGE_DOWN,
 
+  EDITOR_KEY_C,
+  EDITOR_KEY_V,
+
   EDITOR_BUTTON_LEFT,
 
   EDITOR_KEY_P
@@ -97,6 +100,8 @@ void editor_cursor_insert(Editor *editor, u8 codepoint);
 void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
 void editor_cursor_remove_right(Editor *editor);
+
+void editor_copy_selection_to_clipboard(Editor *editor);
 void editor_remove_selection(Editor *editor);
 void editor_update_selected(Editor *editor, bool selected);
 

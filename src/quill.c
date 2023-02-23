@@ -1,6 +1,19 @@
 #include "quill.h"
+#include "quill_data_structures.h"
 
 Platform platform;
+
+QUILL_PLATFORM_API void platform_clipboard_push(Platform *platform, u8 value) {
+  vector_push(platform->clipboard, value);
+}
+
+QUILL_PLATFORM_API void platform_clipboard_clear(Platform *platform) {
+  if(vector_size(platform->clipboard) > 0) {
+    VectorHeader *header = vector_header(platform->clipboard);
+    header->size = 0;
+  }
+}
+
 
 Rect rect_create(i32 l, i32 r, i32 t, i32 b) {
   Rect rect = {l, r, t, b};
@@ -40,7 +53,6 @@ Rect rect_union(Rect a, Rect b) {
 void rect_print(Rect rect) {
   printf("l:%d, r:%d, t:%d, b:%d\n", rect.l, rect.r, rect.t, rect.b);
 }
-
 
 BackBuffer *backbuffer_create(i32 w, i32 h, u32 bytes_per_pixel) {
   BackBuffer *backbuffer = (BackBuffer *)malloc(sizeof(BackBuffer));
