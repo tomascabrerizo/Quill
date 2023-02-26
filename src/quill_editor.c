@@ -67,9 +67,25 @@ static u8 editor_get_current_codepoint(Editor *editor) {
   }
 }
 
+static inline void editor_undo_file_command_selection(Editor *editor, u8 *selection, FileCommandType type) {
+  File *file = editor->file;
+  FileCommand *command = file_command_stack_push(file->undo_stack);
+  command->type = type;
+
+  vector_clear(command->text);
+  while(*selection != '\0') {
+    vector_push(command->text, *selection++);
+  }
+  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+
+  command->start = start;
+  command->end = end;
+
+}
+
 static inline void editor_undo_file_command_start(Editor *editor, u8 codepoint, FileCommandType type, bool sequence_enable) {
   File *file = editor->file;
-
   FileCommand *command = file_command_stack_top(file->undo_stack);
 
   bool is_sequence = false;
@@ -134,6 +150,7 @@ static inline void editor_push_and_process_undo_command(Editor *editor) {
     case FILE_COMMAND_JOIN_LINES: {
 
       printf("FILE_COMMAND_JOIN_LINES\n");
+
       vector_push(command->text, '\0');
       printf("%s\n", command->text);
       cursor_print(start);
@@ -143,6 +160,7 @@ static inline void editor_push_and_process_undo_command(Editor *editor) {
     case FILE_COMMAND_SPLIT_LINE: {
 
       printf("FILE_COMMAND_SPLIT_LINE\n");
+
       vector_push(command->text, '\0');
       printf("%s\n", command->text);
       cursor_print(start);
@@ -217,10 +235,17 @@ static int editor_default_message_handler(struct Element *element, Message messa
         editor_step_cursor_page_up(editor);
       } break;
       case EDITOR_KEY_RETURN: {
-        u8 codepoint = editor_get_current_codepoint(editor);
-        editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_INSERT, false);
-        editor_cursor_remove(editor);
-        editor_undo_file_command_end(editor);
+        if(!editor->selected) {
+          u8 codepoint = editor_get_current_codepoint(editor);
+          editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_INSERT, false);
+          editor_cursor_remove(editor);
+          editor_undo_file_command_end(editor);
+        } else {
+          u8 *selection = editor_get_selection(editor);
+          printf("%s\n", selection);
+          editor_undo_file_command_selection(editor, selection, FILE_COMMAND_INSERT);
+          editor_remove_selection(editor);
+        }
       } break;
       case EDITOR_KEY_DELETE: {
         editor_cursor_remove_right(editor);
@@ -564,11 +589,6 @@ void editor_cursor_insert_new_line(Editor *editor) {
 }
 
 void editor_cursor_remove(Editor *editor) {
-  if(editor->selected) {
-    editor_remove_selection(editor);
-    return;
-  }
-
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
@@ -642,47 +662,54 @@ void editor_paste_clipboard(Editor *editor) {
   platform_free_clipboard(clipboard);
 }
 
+u8 *editor_get_selection(Editor *editor) {
+  File *file = editor->file;
+  platform_temp_clipboard_clear(&platform);
+
+  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+
+  for(u32 i = start.line; i <= end.line; ++i) {
+    Line *line = file_get_line_at(file, i);
+    u32 size = line_size(line);
+    if(start.line == end.line) {
+      for(u32 j = start.col; j < end.col; ++j) {
+        platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
+      }
+    } else if(i == start.line) {
+      for(u32 j = start.col; j < size; ++j) {
+        platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
+      }
+    } else if(i == end.line) {
+      for(u32 j = 0; j < end.col; ++j) {
+        platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
+      }
+    } else {
+      for(u32 j = 0; j < size; ++j) {
+        platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
+      }
+    }
+    if(i < end.line) {
+      platform_temp_clipboard_push(&platform, '\n');
+    }
+  }
+  platform_temp_clipboard_push(&platform, '\0');
+
+  return platform.temp_clipboard;
+}
+
 void editor_copy_selection_to_clipboard(Editor *editor) {
   if(editor->selected) {
-    File *file = editor->file;
     Cursor *cursor = &editor->cursor;
-    platform_temp_clipboard_clear(&platform);
 
     Cursor start = cursor_min(editor->cursor, editor->selection_mark);
     Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+    (void)end;
 
-    for(u32 i = start.line; i <= end.line; ++i) {
-      Line *line = file_get_line_at(file, i);
-      u32 size = line_size(line);
-      if(start.line == end.line) {
-        for(u32 j = start.col; j < end.col; ++j) {
-          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
-        }
-      } else if(i == start.line) {
-        for(u32 j = start.col; j < size; ++j) {
-          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
-        }
-      } else if(i == end.line) {
-        for(u32 j = 0; j < end.col; ++j) {
-          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
-        }
-      } else {
-        for(u32 j = 0; j < size; ++j) {
-          platform_temp_clipboard_push(&platform, line_get_codepoint_at(line, j));
-        }
-      }
-      if(i < end.line) {
-        platform_temp_clipboard_push(&platform, '\n');
-      }
-    }
-    platform_temp_clipboard_push(&platform, '\0');
-    platform_set_clipboard(platform.temp_clipboard);
-
+    platform_set_clipboard(editor_get_selection(editor));
     editor->selected = false;
     *cursor = start;
-
     element_redraw(editor, 0);
-
   }
 }
 

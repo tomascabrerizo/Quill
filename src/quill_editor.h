@@ -77,6 +77,7 @@ typedef struct Editor {
 
   bool selected;
   Cursor selection_mark;
+  u8 *selection;
 
 } Editor;
 
@@ -101,6 +102,7 @@ void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
 void editor_cursor_remove_right(Editor *editor);
 
+u8 *editor_get_selection(Editor *editor);
 void editor_paste_clipboard(Editor *editor);
 void editor_copy_selection_to_clipboard(Editor *editor);
 void editor_remove_selection(Editor *editor);
