@@ -67,21 +67,42 @@ static u8 editor_get_current_codepoint(Editor *editor) {
   }
 }
 
-static inline void editor_undo_file_command_selection(Editor *editor, u8 *selection, FileCommandType type) {
+static inline void editor_undo_file_command_start_end(Editor *editor, u8 *text, Cursor start, Cursor end, FileCommandType type) {
   File *file = editor->file;
   FileCommand *command = file_command_stack_push(file->undo_stack);
   command->type = type;
 
   vector_clear(command->text);
-  while(*selection != '\0') {
-    vector_push(command->text, *selection++);
+  while(*text != '\0') {
+    vector_push(command->text, *text++);
   }
-  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
-  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
 
   command->start = start;
   command->end = end;
+}
 
+static inline void editor_undo_file_command_selection(Editor *editor, u8 *selection, FileCommandType type) {
+  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+  editor_undo_file_command_start_end(editor, selection, start, end, type);
+}
+
+static inline void editor_undo_file_command_line(Editor *editor, FileCommandType type) {
+  File *file = editor->file;
+  FileCommand *command = file_command_stack_push(file->undo_stack);
+  command->type = type;
+
+  vector_clear(command->text);
+
+  switch(type) {
+  case FILE_COMMAND_JOIN_LINES: {
+    command->start = editor->cursor;
+    command->end = editor->cursor;
+    command->end.line += 1;
+  } break;
+  case FILE_COMMAND_SPLIT_LINE: {} break;
+  default: { assert(!"invalid type"); } break;
+  }
 }
 
 static inline void editor_undo_file_command_start(Editor *editor, u8 codepoint, FileCommandType type, bool sequence_enable) {
@@ -149,8 +170,9 @@ static inline void editor_push_and_process_undo_command(Editor *editor) {
     } break;
     case FILE_COMMAND_JOIN_LINES: {
 
-      printf("FILE_COMMAND_JOIN_LINES\n");
+      editor_join_lines(editor, command->start.line, command->end.line, command->start.col);
 
+      printf("FILE_COMMAND_JOIN_LINES\n");
       vector_push(command->text, '\0');
       printf("%s\n", command->text);
       cursor_print(start);
@@ -158,6 +180,8 @@ static inline void editor_push_and_process_undo_command(Editor *editor) {
 
     } break;
     case FILE_COMMAND_SPLIT_LINE: {
+      /* TODO: find a good way to send a split line command */
+      editor_split_line(editor, command->start.line, command->start.col);
 
       printf("FILE_COMMAND_SPLIT_LINE\n");
 
@@ -251,11 +275,14 @@ static int editor_default_message_handler(struct Element *element, Message messa
         editor_cursor_remove_right(editor);
       } break;
       case EDITOR_KEY_ENTER: {
+        editor_undo_file_command_line(editor, FILE_COMMAND_JOIN_LINES);
         editor_cursor_insert_new_line(editor);
       } break;
       case EDITOR_KEY_TAB: {
         for(u32 i = 0; i < editor->tab_size; ++i) {
+          editor_undo_file_command_start(editor, ' ', FILE_COMMAND_REMOVE, true);
           editor_cursor_insert(editor, ' ');
+          editor_undo_file_command_end(editor);
         }
       } break;
       case EDITOR_KEY_C: {
@@ -265,7 +292,12 @@ static int editor_default_message_handler(struct Element *element, Message messa
       } break;
       case EDITOR_KEY_V: {
         if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
+          Cursor start = editor->cursor;
           editor_paste_clipboard(editor);
+          Cursor end = editor->cursor;
+          u8 *range = editor_get_range(editor, start, end);
+          printf("%s\n", range);
+          editor_undo_file_command_start_end(editor, range, start, end, FILE_COMMAND_REMOVE);
         }
       } break;
       case EDITOR_KEY_Z: {
@@ -569,23 +601,52 @@ void editor_cursor_insert(Editor *editor, u8 codepoint) {
   editor_step_cursor_right(editor);
 }
 
-void editor_cursor_insert_new_line(Editor *editor) {
+
+void editor_split_line(Editor *editor, u32 line, u32 col) {
   File *file = editor->file;
+  assert(line < file_line_count(file));
+  file_insert_new_line_at(file, line);
+
+  Line *new_line = file_get_line_at(file, line);
+  Line *old_line = file_get_line_at(file, line + 1);
+
+  line_copy(new_line, old_line, col);
+  line_remove_from_front_up_to(old_line, col);
+
   Cursor *cursor = &editor->cursor;
-  assert(cursor->line < file_line_count(file));
-  file_insert_new_line_at(file, cursor->line);
-
-  Line *new_line = file_get_line_at(file, cursor->line);
-  Line *old_line = file_get_line_at(file, cursor->line + 1);
-
-  line_copy(new_line, old_line, cursor->col);
-  line_remove_from_front_up_to(old_line, cursor->col);
-
+  cursor->line = line + 1;
+  cursor->col = 0;
   cursor->save_col = 0;
-  editor_step_cursor_down(editor);
 
+  editor_should_scroll(editor);
   element_redraw(editor, 0);
+}
 
+void editor_join_lines(Editor *editor, u32 line0, u32 line1, u32 col) {
+  File *file = editor->file;
+  Line *first_line = file_get_line_at(file, line0);
+  Line *second_line = file_get_line_at(file, line1);
+
+  u32 second_line_size = line_size(second_line);
+
+  line_copy_at(first_line, second_line, second_line_size, col);
+
+  line_print(first_line);
+
+  file_remove_line_at(file, line1 + 1);
+
+  Cursor *cursor = &editor->cursor;
+  cursor->line = line0;
+  cursor->col = col;
+  cursor->save_col = col;
+
+  editor_should_scroll(editor);
+  element_redraw(editor, 0);
+}
+
+void editor_cursor_insert_new_line(Editor *editor) {
+  Cursor *cursor = &editor->cursor;
+  editor_split_line(editor, cursor->line, cursor->col);
 }
 
 void editor_cursor_remove(Editor *editor) {
@@ -662,12 +723,9 @@ void editor_paste_clipboard(Editor *editor) {
   platform_free_clipboard(clipboard);
 }
 
-u8 *editor_get_selection(Editor *editor) {
+u8 *editor_get_range(Editor *editor, Cursor start, Cursor end) {
   File *file = editor->file;
   platform_temp_clipboard_clear(&platform);
-
-  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
-  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
 
   for(u32 i = start.line; i <= end.line; ++i) {
     Line *line = file_get_line_at(file, i);
@@ -696,6 +754,12 @@ u8 *editor_get_selection(Editor *editor) {
   platform_temp_clipboard_push(&platform, '\0');
 
   return platform.temp_clipboard;
+}
+
+u8 *editor_get_selection(Editor *editor) {
+  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+  return editor_get_range(editor, start, end);
 }
 
 void editor_copy_selection_to_clipboard(Editor *editor) {

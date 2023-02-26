@@ -102,12 +102,16 @@ void editor_cursor_insert_new_line(Editor *editor);
 void editor_cursor_remove(Editor *editor);
 void editor_cursor_remove_right(Editor *editor);
 
+void editor_split_line(Editor *editor, u32 line, u32 col);
+void editor_join_lines(Editor *editor, u32 line0, u32 line1, u32 col);
+
 u8 *editor_get_selection(Editor *editor);
 void editor_paste_clipboard(Editor *editor);
 void editor_copy_selection_to_clipboard(Editor *editor);
 void editor_remove_selection(Editor *editor);
 void editor_update_selected(Editor *editor, bool selected);
 
+u8 *editor_get_range(Editor *editor, Cursor start, Cursor end);
 void editor_remove_range(Editor *editor, Cursor start, Cursor end);
 void editor_add_range(Editor *editor, u8 *text, Cursor start, Cursor end);
 

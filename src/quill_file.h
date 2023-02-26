@@ -55,6 +55,7 @@ File *file_load_from_existing_file(u8 *filename);
 void file_insert_new_line(File *file);
 void file_insert_new_line_at(File *file, u32 index);
 void file_remove_line(File *file);
+/* TODO: file_remove_line_at must remove (index + 1) */
 void file_remove_line_at(File *file, u32 index);
 void file_print(File *file);
 struct Line *file_get_line_at(File *file, u32 index);

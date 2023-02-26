@@ -23,4 +23,6 @@ void line_copy_at(Line *des, Line *src, u32 count, u32 index);
 u8 line_get_codepoint_at(Line *line, u32 index);
 u32 line_size(Line *line);
 
+void line_print(Line *line);
+
 #endif /* _QUILL_LINE_H_ */

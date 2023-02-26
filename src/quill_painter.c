@@ -89,6 +89,9 @@ void painter_draw_text(Painter *painter, u8 *text, u32 size, i32 x, i32 y, u32 c
   i32 pen_x = x;
   for(u32 i = 0; i < size; ++i) {
     u16 codepoint = (u16)text[i];
+
+    if((codepoint < ' ') || (codepoint > '~')) codepoint = '?';
+
     Glyph *glyph = &painter->font->glyph_table[codepoint];
     if(codepoint != (u16)' ') {
       painter_draw_glyph(painter, glyph, pen_x, pen_y, color);
@@ -111,6 +114,8 @@ void painter_draw_token(Painter *painter, Token *token, i32 x, i32 y, u32 color)
 
   for(u32 i = token->start; i < token->end; ++i) {
     u8 codepoint = line_get_codepoint_at(token->line, i);
+    if((codepoint < ' ') || (codepoint > '~')) codepoint = '?';
+
     Glyph *glyph = &painter->font->glyph_table[codepoint];
     painter_draw_glyph(painter, glyph, x, y, color);
     x += platform.font->advance;
