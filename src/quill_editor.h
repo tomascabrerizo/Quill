@@ -43,6 +43,7 @@ typedef enum EditorMessageType {
 
   EDITOR_KEY_C,
   EDITOR_KEY_V,
+  EDITOR_KEY_Z,
 
   EDITOR_BUTTON_LEFT,
 
@@ -81,7 +82,6 @@ typedef struct Editor {
 
 struct Editor *editor_create(Element *parent);
 
-
 void editor_step_cursor_right(Editor *editor);
 void editor_step_cursor_left(Editor *editor);
 void editor_step_cursor_up(Editor *editor);
@@ -105,6 +105,9 @@ void editor_paste_clipboard(Editor *editor);
 void editor_copy_selection_to_clipboard(Editor *editor);
 void editor_remove_selection(Editor *editor);
 void editor_update_selected(Editor *editor, bool selected);
+
+void editor_remove_range(Editor *editor, Cursor start, Cursor end);
+void editor_add_range(Editor *editor, u8 *text, Cursor start, Cursor end);
 
 bool editor_should_scroll(Editor *editor);
 

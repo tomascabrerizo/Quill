@@ -5,8 +5,11 @@
 #include "quill_cursor.h"
 
 typedef enum FileCommandType {
+  FILE_COMMAN_NONE,
   FILE_COMMAND_INSERT,
   FILE_COMMAND_REMOVE,
+  FILE_COMMAND_JOIN_LINES,
+  FILE_COMMAND_SPLIT_LINE,
 } FileCommandType;
 
 typedef struct FileCommand {
@@ -27,6 +30,7 @@ FileCommandStack *file_command_stack_create();
 void file_command_stack_destroy(FileCommandStack *stack);
 FileCommand *file_command_stack_push(FileCommandStack *stack);
 FileCommand *file_command_stack_pop(FileCommandStack *stack);
+FileCommand *file_command_stack_top(FileCommandStack *stack);
 
 #define FILE_MAX_NAME_SIZE 256
 typedef struct File {
@@ -55,9 +59,6 @@ void file_remove_line_at(File *file, u32 index);
 void file_print(File *file);
 struct Line *file_get_line_at(File *file, u32 index);
 u32 file_line_count(File *file);
-
-void file_undo_command_start(File *file, FileCommandType type);
-void file_undo_command_end(FileCommandType type);
 
 #define FOLDER_MAX_NAME_SIZE 256
 typedef struct Folder {

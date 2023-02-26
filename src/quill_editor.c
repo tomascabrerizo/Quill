@@ -45,6 +45,115 @@ static inline Rect editor_get_cursor_line_rect(Editor *editor) {
   return rect;
 }
 
+static inline Cursor cursor_min(Cursor a, Cursor b) {
+  if(a.line == b.line) {
+    return (a.col < b.col) ? a : b;
+  }
+  return (a.line < b.line) ? a : b;
+}
+
+static inline Cursor cursor_max(Cursor a, Cursor b) {
+  if(a.line == b.line) {
+    return (a.col > b.col) ? a : b;
+  }
+  return (a.line > b.line) ? a : b;
+}
+
+static u8 editor_get_current_codepoint(Editor *editor) {
+  if(editor->cursor.col > 0) {
+    return line_get_codepoint_at(file_get_line_at(editor->file, editor->cursor.line), (editor->cursor.col - 1));
+  } else {
+    return '\n';
+  }
+}
+
+static inline void editor_undo_file_command_start(Editor *editor, u8 codepoint, FileCommandType type, bool sequence_enable) {
+  File *file = editor->file;
+
+  FileCommand *command = file_command_stack_top(file->undo_stack);
+
+  bool is_sequence = false;
+  if(sequence_enable) {
+    is_sequence = (command &&
+                        (command->type == type) &&
+                        (command->end.line == editor->cursor.line) &&
+                        (command->end.col == editor->cursor.col));
+
+    is_sequence = is_sequence && (codepoint != ' ');
+  }
+
+  if(is_sequence) {
+    vector_push(command->text, codepoint);
+  } else {
+    command = file_command_stack_push(file->undo_stack);
+    command->type = type;
+    vector_clear(command->text);
+    vector_push(command->text, codepoint);
+    command->start = editor->cursor;
+  }
+}
+
+static inline void editor_undo_file_command_end(Editor *editor) {
+  File *file = editor->file;
+  FileCommand *command = file_command_stack_top(file->undo_stack);
+  assert(command);
+  command->end = editor->cursor;
+}
+
+static inline void editor_push_and_process_undo_command(Editor *editor) {
+  File *file = editor->file;
+  FileCommandStack *undo_stack = file->undo_stack;
+  if(undo_stack->size > 0) {
+    FileCommand *command = file_command_stack_pop(undo_stack);
+    Cursor start = cursor_min(command->start, command->end);
+    Cursor end = cursor_max(command->start, command->end);
+
+    switch(command->type) {
+    case FILE_COMMAND_REMOVE: {
+
+      editor_remove_range(editor, start, end);
+
+      printf("FILE_COMMAND_REMOVE\n");
+      vector_push(command->text, '\0');
+      printf("%s\n", command->text);
+      cursor_print(start);
+      cursor_print(end);
+
+    } break;
+    case FILE_COMMAND_INSERT: {
+
+      editor_add_range(editor, command->text, start, end);
+
+      printf("FILE_COMMAND_INSERT\n");
+      vector_push(command->text, '\0');
+      printf("%s\n", command->text);
+      cursor_print(start);
+      cursor_print(end);
+
+    } break;
+    case FILE_COMMAND_JOIN_LINES: {
+
+      printf("FILE_COMMAND_JOIN_LINES\n");
+      vector_push(command->text, '\0');
+      printf("%s\n", command->text);
+      cursor_print(start);
+      cursor_print(end);
+
+    } break;
+    case FILE_COMMAND_SPLIT_LINE: {
+
+      printf("FILE_COMMAND_SPLIT_LINE\n");
+      vector_push(command->text, '\0');
+      printf("%s\n", command->text);
+      cursor_print(start);
+      cursor_print(end);
+
+    } break;
+    default: {} break;
+    }
+  }
+}
+
 static int editor_default_message_handler(struct Element *element, Message message, void *data) {
   Editor *editor = (Editor *)element;
 
@@ -56,7 +165,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
   case MESSAGE_DRAW_ON_TOP: {
 
   } break;
-case MESSAGE_RESIZE: {
+  case MESSAGE_RESIZE: {
 
   } break;
   case MESSAGE_KEYDOWN: {
@@ -108,7 +217,10 @@ case MESSAGE_RESIZE: {
         editor_step_cursor_page_up(editor);
       } break;
       case EDITOR_KEY_RETURN: {
+        u8 codepoint = editor_get_current_codepoint(editor);
+        editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_INSERT, false);
         editor_cursor_remove(editor);
+        editor_undo_file_command_end(editor);
       } break;
       case EDITOR_KEY_DELETE: {
         editor_cursor_remove_right(editor);
@@ -131,12 +243,15 @@ case MESSAGE_RESIZE: {
           editor_paste_clipboard(editor);
         }
       } break;
+      case EDITOR_KEY_Z: {
+        if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
+          editor_push_and_process_undo_command(editor);
+        }
+      } break;
 
       }
-
       element_update(editor);
     }
-
   } break;
   case MESSAGE_KEYUP: {
 
@@ -144,13 +259,22 @@ case MESSAGE_RESIZE: {
   case MESSAGE_TEXTINPUT: {
     /* TODO: Find a good way to handle when the editor has no file */
     if(editor->file) {
-      editor_cursor_insert(editor, (u8)(u64)data);
+      u8 codepoint = (u8)(u64)data;
+      editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_REMOVE, true);
+      editor_cursor_insert(editor, codepoint);
+      editor_undo_file_command_end(editor);
+
+      element_update(editor);
     }
-    element_update(editor);
   } break;
   case MESSAGE_BUTTONDOWN: {
   } break;
-
+  case MESSAGE_EDITOR_OPEN_FILE: {
+    File *file = (File *)data;
+    editor->file = file;
+    editor->cursor = file->cursor_saved;
+  } break;
+  default: {} break;
   }
 
   return 0;
@@ -493,20 +617,6 @@ void editor_cursor_remove_right(Editor *editor) {
   element_redraw(editor, 0);
 }
 
-static inline Cursor cursor_min(Cursor a, Cursor b) {
-  if(a.line == b.line) {
-    return (a.col < b.col) ? a : b;
-  }
-  return (a.line < b.line) ? a : b;
-}
-
-static inline Cursor cursor_max(Cursor a, Cursor b) {
-  if(a.line == b.line) {
-    return (a.col > b.col) ? a : b;
-  }
-  return (a.line > b.line) ? a : b;
-}
-
 /* TODO: Move this function into line API */
 static inline void line_remove_range(Line *line, u32 start, u32 end) {
   u32 remove_cout = end - start;
@@ -576,13 +686,34 @@ void editor_copy_selection_to_clipboard(Editor *editor) {
   }
 }
 
-void editor_remove_selection(Editor *editor) {
+void editor_add_range(Editor *editor, u8 *text, Cursor start, Cursor end) {
+  editor->cursor = start;
+  u32 text_size = vector_size(text);
+  for(u32 i = 0; i < text_size; ++i) {
+    u8 codepoint = text[i];
+    if(codepoint == '\n') {
+      editor_cursor_insert_new_line(editor);
+    } else {
+      editor_cursor_insert(editor, codepoint);
+    }
+  }
+
+  printf("editor cursor:\n");
+  cursor_print(editor->cursor);
+  printf("end cursor:\n");
+  cursor_print(end);
+
+  assert((editor->cursor.line == end.line) &&
+         (editor->cursor.col == end.col));
+
+  editor_should_scroll(editor);
+  element_redraw(editor, 0);
+}
+
+
+void editor_remove_range(Editor *editor, Cursor start, Cursor end) {
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
-
-  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
-  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
-
   if(start.line == end.line) {
     Line *line = file_get_line_at(file, start.line);
     line_remove_range(line, start.col, end.col);
@@ -604,7 +735,14 @@ void editor_remove_selection(Editor *editor) {
   editor->selected = false;
   *cursor = start;
 
+  editor_should_scroll(editor);
   element_redraw(editor, 0);
+}
+
+void editor_remove_selection(Editor *editor) {
+  Cursor start = cursor_min(editor->cursor, editor->selection_mark);
+  Cursor end = cursor_max(editor->cursor, editor->selection_mark);
+  editor_remove_range(editor, start, end);
 }
 
 void editor_update_selected(Editor *editor, bool selected) {
@@ -737,7 +875,7 @@ static void editor_draw_selection(Painter *painter, Editor *editor, u32 start, u
 
     Line *line = file_get_line_at(file, line_index);
     u32 size = line_size(line);
-    Rect line_rect = rect_create(screen_x, screen_x + size * platform.font->advance,
+    Rect line_rect = rect_create(screen_x, screen_x + MAX(size * platform.font->advance, platform.font->advance/2),
                                  screen_y, screen_y + platform.font->line_gap);
 
     if((line_index == start_selection.line) && (line_index == end_selection.line)) {

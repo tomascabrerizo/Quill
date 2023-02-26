@@ -33,6 +33,8 @@ void *vector_grow(void *vector, u32 element_size);
 
 #define vector_size(vector) ((vector) != 0 ? vector_header((vector))->size : 0)
 
+#define vector_clear(vector) ((vector) != 0 ? (vector_header((vector))->size = 0) : 0)
+
 #define vector_fit(vector) (vector_size((vector)) >= vector_capacity((vector)) ? \
   (vector) = vector_grow((vector), sizeof(*(vector))) : 0)
 

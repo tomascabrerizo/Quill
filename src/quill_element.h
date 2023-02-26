@@ -11,6 +11,7 @@ typedef enum Message {
   MESSAGE_KEYUP,
   MESSAGE_TEXTINPUT,
   MESSAGE_BUTTONDOWN,
+  MESSAGE_EDITOR_OPEN_FILE,
 } Message;
 
 struct Element;

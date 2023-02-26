@@ -300,6 +300,10 @@ int main(void) {
         element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_V|(ctrl ? EDITOR_MOD_CRTL : 0));
       }
 
+      else if(e.key.keysym.scancode == SDL_SCANCODE_Z) {
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_Z|(ctrl ? EDITOR_MOD_CRTL : 0));
+      }
+
       else if(e.key.keysym.scancode == SDL_SCANCODE_P) {
         u32 keycode = EDITOR_KEY_P;
         if(e.key.keysym.mod & KMOD_CTRL) {

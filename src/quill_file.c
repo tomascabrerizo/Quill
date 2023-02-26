@@ -37,16 +37,36 @@ FileCommand *file_command_stack_pop(FileCommandStack *stack) {
   return command;
 }
 
+FileCommand *file_command_stack_top(FileCommandStack *stack) {
+  FileCommand *command = 0;
+  if(stack->size > 0) {
+    u32 top = stack->top - 1;
+    if(((i32)top) < 0) {
+      stack->top = FILE_MAX_UNDO_REDO_SIZE - 1;
+    }
+    command = &stack->commands[top];
+  }
+  return command;
+}
+
 File *file_create(u8 *filename) {
   File *file = (File *)malloc(sizeof(File));
   memset(file, 0, sizeof(File));
   u32 filename_size = strlen((char *)filename);
   assert(filename_size <= FILE_MAX_NAME_SIZE);
   memcpy(file->name, filename, filename_size);
+
+  file->undo_stack = file_command_stack_create();
+  file->redo_stack = file_command_stack_create();
+
   return file;
 }
 
 inline static void file_free_all_lines(File * file) {
+
+  file_command_stack_destroy(file->undo_stack);
+  file_command_stack_destroy(file->redo_stack);
+
   for(u32 i = 0; i < file_line_count(file); ++i) {
     line_destroy(file_get_line_at(file, i));
   }
@@ -61,6 +81,7 @@ inline static void file_free_all_lines(File * file) {
 void file_destroy(File *file) {
   file_free_all_lines(file);
   gapbuffer_free(file->buffer);
+  printf("File destroy\n");
 }
 
 

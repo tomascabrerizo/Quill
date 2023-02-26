@@ -117,12 +117,10 @@ static int application_default_message_handler(struct Element *element, Message 
           application->current_editor->file->cursor_saved = application->current_editor->cursor;
         }
         File *file = application->folder->files[application->file_selected_index];
-        application->current_editor->file = file;
-        application->current_editor->cursor = file->cursor_saved;
+        element_message(application->current_editor, MESSAGE_EDITOR_OPEN_FILE, file);
         if(editor_should_scroll(application->current_editor)) {
           rect = 0;
         }
-
       }
       element_redraw(application, rect);
       element_update(application);
@@ -159,7 +157,7 @@ static int application_default_message_handler(struct Element *element, Message 
     }
 
   } break;
-
+  default: {} break;
   }
 
   return 0;
