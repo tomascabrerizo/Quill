@@ -21,6 +21,7 @@ FileCommand *file_command_stack_push(FileCommandStack *stack) {
   assert(stack->size <= FILE_MAX_UNDO_REDO_SIZE);
   assert(stack->top < FILE_MAX_UNDO_REDO_SIZE);
   FileCommand *command = &stack->commands[stack->top];
+  printf("push top:%d\n", stack->top);
   stack->top = (stack->top + 1) % FILE_MAX_UNDO_REDO_SIZE;
   stack->size += (stack->size < FILE_MAX_UNDO_REDO_SIZE);
   return command;
@@ -28,10 +29,14 @@ FileCommand *file_command_stack_push(FileCommandStack *stack) {
 
 FileCommand *file_command_stack_pop(FileCommandStack *stack) {
   assert(stack->size > 0);
-  --stack->top;
-  if(((i32)stack->top) < 0) {
-    stack->top = FILE_MAX_UNDO_REDO_SIZE - 1;
+
+  i32 top = (i32)stack->top - 1;
+  if(top < 0) {
+    top = FILE_MAX_UNDO_REDO_SIZE - 1;
   }
+
+  stack->top = top;
+
   FileCommand *command = &stack->commands[stack->top];
   stack->size--;
   return command;
@@ -40,10 +45,14 @@ FileCommand *file_command_stack_pop(FileCommandStack *stack) {
 FileCommand *file_command_stack_top(FileCommandStack *stack) {
   FileCommand *command = 0;
   if(stack->size > 0) {
-    u32 top = stack->top - 1;
-    if(((i32)top) < 0) {
-      stack->top = FILE_MAX_UNDO_REDO_SIZE - 1;
+
+    i32 top = (i32)stack->top - 1;
+    if(top < 0) {
+      top = (FILE_MAX_UNDO_REDO_SIZE - 1);
     }
+
+    printf("peek top:%d\n", top);
+
     command = &stack->commands[top];
   }
   return command;

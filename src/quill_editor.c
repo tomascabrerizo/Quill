@@ -127,6 +127,7 @@ static inline void editor_undo_file_command_start(Editor *editor, u8 codepoint, 
     vector_clear(command->text);
     vector_push(command->text, codepoint);
     command->start = editor->cursor;
+    printf("%p\n", command);
   }
 }
 
@@ -135,6 +136,7 @@ static inline void editor_undo_file_command_end(Editor *editor) {
   FileCommand *command = file_command_stack_top(file->undo_stack);
   assert(command);
   command->end = editor->cursor;
+  printf("%p\n", command);
 }
 
 static inline void editor_push_and_process_undo_command(Editor *editor) {
@@ -266,14 +268,19 @@ static int editor_default_message_handler(struct Element *element, Message messa
           editor_undo_file_command_end(editor);
         } else {
           u8 *selection = editor_get_selection(editor);
-          printf("%s\n", selection);
           editor_undo_file_command_selection(editor, selection, FILE_COMMAND_INSERT);
           editor_remove_selection(editor);
         }
       } break;
       case EDITOR_KEY_DELETE: {
-        editor_cursor_remove_right(editor);
-      } break;
+        if(!editor->selected) {
+          editor_cursor_remove_right(editor);
+        } else {
+          u8 *selection = editor_get_selection(editor);
+          editor_undo_file_command_selection(editor, selection, FILE_COMMAND_INSERT);
+          editor_remove_selection(editor);
+        }
+        } break;
       case EDITOR_KEY_ENTER: {
         editor_undo_file_command_line(editor, FILE_COMMAND_JOIN_LINES);
         editor_cursor_insert_new_line(editor);
@@ -296,7 +303,6 @@ static int editor_default_message_handler(struct Element *element, Message messa
           editor_paste_clipboard(editor);
           Cursor end = editor->cursor;
           u8 *range = editor_get_range(editor, start, end);
-          printf("%s\n", range);
           editor_undo_file_command_start_end(editor, range, start, end, FILE_COMMAND_REMOVE);
         }
       } break;
@@ -674,11 +680,6 @@ void editor_cursor_remove(Editor *editor) {
 }
 
 void editor_cursor_remove_right(Editor *editor) {
-  if(editor->selected) {
-    editor_remove_selection(editor);
-    return;
-  }
-
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
