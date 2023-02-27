@@ -17,6 +17,7 @@ typedef struct FileCommand {
   Cursor start;
   Cursor end;
   u8 *text;
+  Cursor saved_cursor;
 } FileCommand;
 
 #define FILE_MAX_UNDO_REDO_SIZE 256

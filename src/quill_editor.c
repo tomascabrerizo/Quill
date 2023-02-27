@@ -67,7 +67,7 @@ static u8 editor_get_current_codepoint(Editor *editor) {
   }
 }
 
-static inline void editor_undo_file_command_start_end(Editor *editor, u8 *text, Cursor start, Cursor end, FileCommandType type) {
+static inline void editor_undo_file_command_start_end(Editor *editor, u8 *text, Cursor start, Cursor end, FileCommandType type, Cursor *save_cusor) {
   File *file = editor->file;
   FileCommand *command = file_command_stack_push(file->undo_stack);
   command->type = type;
@@ -79,12 +79,17 @@ static inline void editor_undo_file_command_start_end(Editor *editor, u8 *text, 
 
   command->start = start;
   command->end = end;
+  if(save_cusor) {
+    command->saved_cursor = *save_cusor;
+  } else {
+    command->saved_cursor = start;
+  }
 }
 
 static inline void editor_undo_file_command_selection(Editor *editor, u8 *selection, FileCommandType type) {
   Cursor start = cursor_min(editor->cursor, editor->selection_mark);
   Cursor end = cursor_max(editor->cursor, editor->selection_mark);
-  editor_undo_file_command_start_end(editor, selection, start, end, type);
+  editor_undo_file_command_start_end(editor, selection, start, end, type, &editor->cursor);
 }
 
 static inline void editor_undo_file_command_line(Editor *editor, FileCommandType type) {
@@ -103,18 +108,19 @@ static inline void editor_undo_file_command_line(Editor *editor, FileCommandType
   case FILE_COMMAND_SPLIT_LINE: {} break;
   default: { assert(!"invalid type"); } break;
   }
+  command->saved_cursor = editor->cursor;
 }
 
-static inline void editor_undo_file_command_start(Editor *editor, u8 codepoint, FileCommandType type, bool sequence_enable) {
+static inline void editor_undo_file_command_start(Editor *editor, u8 codepoint, FileCommandType type, bool sequence_enable, Cursor *saved_cursor) {
   File *file = editor->file;
   FileCommand *command = file_command_stack_top(file->undo_stack);
 
   bool is_sequence = false;
   if(sequence_enable) {
     is_sequence = (command &&
-                        (command->type == type) &&
-                        (command->end.line == editor->cursor.line) &&
-                        (command->end.col == editor->cursor.col));
+                   (command->type == type) &&
+                   (command->end.line == editor->cursor.line) &&
+                   (command->end.col == editor->cursor.col));
 
     is_sequence = is_sequence && (codepoint != ' ');
   }
@@ -127,7 +133,11 @@ static inline void editor_undo_file_command_start(Editor *editor, u8 codepoint, 
     vector_clear(command->text);
     vector_push(command->text, codepoint);
     command->start = editor->cursor;
-    printf("%p\n", command);
+    if(saved_cursor) {
+      command->saved_cursor = *saved_cursor;
+    } else {
+      command->saved_cursor = editor->cursor;
+    }
   }
 }
 
@@ -136,7 +146,6 @@ static inline void editor_undo_file_command_end(Editor *editor) {
   FileCommand *command = file_command_stack_top(file->undo_stack);
   assert(command);
   command->end = editor->cursor;
-  printf("%p\n", command);
 }
 
 static inline void editor_push_and_process_undo_command(Editor *editor) {
@@ -195,6 +204,7 @@ static inline void editor_push_and_process_undo_command(Editor *editor) {
     } break;
     default: {} break;
     }
+    editor->cursor = command->saved_cursor;
   }
 }
 
@@ -263,7 +273,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
       case EDITOR_KEY_RETURN: {
         if(!editor->selected) {
           u8 codepoint = editor_get_current_codepoint(editor);
-          editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_INSERT, false);
+          editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_INSERT, false, 0);
           editor_cursor_remove(editor);
           editor_undo_file_command_end(editor);
         } else {
@@ -274,7 +284,12 @@ static int editor_default_message_handler(struct Element *element, Message messa
       } break;
       case EDITOR_KEY_DELETE: {
         if(!editor->selected) {
-          editor_cursor_remove_right(editor);
+          Cursor saved_cursor = editor->cursor;
+          editor_step_cursor_right(editor);
+          u8 codepoint = editor_get_current_codepoint(editor);
+          editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_INSERT, false, &saved_cursor);
+          editor_cursor_remove(editor);
+          editor_undo_file_command_end(editor);
         } else {
           u8 *selection = editor_get_selection(editor);
           editor_undo_file_command_selection(editor, selection, FILE_COMMAND_INSERT);
@@ -287,7 +302,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
       } break;
       case EDITOR_KEY_TAB: {
         for(u32 i = 0; i < editor->tab_size; ++i) {
-          editor_undo_file_command_start(editor, ' ', FILE_COMMAND_REMOVE, true);
+          editor_undo_file_command_start(editor, ' ', FILE_COMMAND_REMOVE, true, 0);
           editor_cursor_insert(editor, ' ');
           editor_undo_file_command_end(editor);
         }
@@ -303,7 +318,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
           editor_paste_clipboard(editor);
           Cursor end = editor->cursor;
           u8 *range = editor_get_range(editor, start, end);
-          editor_undo_file_command_start_end(editor, range, start, end, FILE_COMMAND_REMOVE);
+          editor_undo_file_command_start_end(editor, range, start, end, FILE_COMMAND_REMOVE, &start);
         }
       } break;
       case EDITOR_KEY_Z: {
@@ -323,7 +338,7 @@ static int editor_default_message_handler(struct Element *element, Message messa
     /* TODO: Find a good way to handle when the editor has no file */
     if(editor->file) {
       u8 codepoint = (u8)(u64)data;
-      editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_REMOVE, true);
+      editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_REMOVE, true, 0);
       editor_cursor_insert(editor, codepoint);
       editor_undo_file_command_end(editor);
 

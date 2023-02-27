@@ -21,7 +21,6 @@ FileCommand *file_command_stack_push(FileCommandStack *stack) {
   assert(stack->size <= FILE_MAX_UNDO_REDO_SIZE);
   assert(stack->top < FILE_MAX_UNDO_REDO_SIZE);
   FileCommand *command = &stack->commands[stack->top];
-  printf("push top:%d\n", stack->top);
   stack->top = (stack->top + 1) % FILE_MAX_UNDO_REDO_SIZE;
   stack->size += (stack->size < FILE_MAX_UNDO_REDO_SIZE);
   return command;
@@ -90,7 +89,7 @@ inline static void file_free_all_lines(File * file) {
 void file_destroy(File *file) {
   file_free_all_lines(file);
   gapbuffer_free(file->buffer);
-  printf("File destroy\n");
+  //printf("File destroy\n");
 }
 
 
