@@ -301,7 +301,9 @@ int main(void) {
       }
 
       else if(e.key.keysym.scancode == SDL_SCANCODE_Z) {
-        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_Z|(ctrl ? EDITOR_MOD_CRTL : 0));
+        element_message(application, MESSAGE_KEYDOWN, EDITOR_KEY_Z|
+                        (ctrl ? EDITOR_MOD_CRTL : 0)|
+                        (shift ? EDITOR_MOD_SHIFT : 0));
       }
 
       else if(e.key.keysym.scancode == SDL_SCANCODE_P) {

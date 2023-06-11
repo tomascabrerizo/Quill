@@ -47,8 +47,6 @@ Rect rect_intersection(Rect a, Rect b);
 Rect rect_union(Rect a, Rect b);
 void rect_print(Rect rect);
 
-
-
 typedef struct BackBuffer {
   u32 *pixels;
   i32 w, h;

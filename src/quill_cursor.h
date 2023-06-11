@@ -10,5 +10,6 @@ typedef struct Cursor {
 } Cursor;
 
 void cursor_print(Cursor cursor);
+bool cursor_equals(Cursor a, Cursor b);
 
 #endif /* _QUILL_CURSOR_H_ */

@@ -148,62 +148,40 @@ static inline void editor_undo_file_command_end(Editor *editor) {
   command->end = editor->cursor;
 }
 
-static inline void editor_push_and_process_undo_command(Editor *editor) {
-  File *file = editor->file;
-  FileCommandStack *undo_stack = file->undo_stack;
-  if(undo_stack->size > 0) {
-    FileCommand *command = file_command_stack_pop(undo_stack);
+static inline void editor_push_and_process_command(Editor *editor, FileCommandStack *stack, FileCommandStack *other_stack) {
+  if(stack->size > 0) {
+    FileCommand *command = file_command_stack_pop(stack);
     Cursor start = cursor_min(command->start, command->end);
     Cursor end = cursor_max(command->start, command->end);
 
+    FileCommand *other_command = file_command_stack_push(other_stack);
+    vector_clear(other_command->text);
+    file_command_copy(other_command, command);
+    other_command->saved_cursor = cursor_equals(command->saved_cursor, command->start) ?
+          command->end : command->start;
+
     switch(command->type) {
     case FILE_COMMAND_REMOVE: {
-
       editor_remove_range(editor, start, end);
-
-      printf("FILE_COMMAND_REMOVE\n");
-      vector_push(command->text, '\0');
-      printf("%s\n", command->text);
-      cursor_print(start);
-      cursor_print(end);
-
+      other_command->type = FILE_COMMAND_INSERT;
     } break;
     case FILE_COMMAND_INSERT: {
-
       editor_add_range(editor, command->text, start, end);
-
-      printf("FILE_COMMAND_INSERT\n");
-      vector_push(command->text, '\0');
-      printf("%s\n", command->text);
-      cursor_print(start);
-      cursor_print(end);
-
+      other_command->type = FILE_COMMAND_REMOVE;
     } break;
     case FILE_COMMAND_JOIN_LINES: {
-
       editor_join_lines(editor, command->start.line, command->end.line, command->start.col);
-
-      printf("FILE_COMMAND_JOIN_LINES\n");
-      vector_push(command->text, '\0');
-      printf("%s\n", command->text);
-      cursor_print(start);
-      cursor_print(end);
-
+      other_command->type = FILE_COMMAND_SPLIT_LINE;
+      other_command->saved_cursor. col = 0;
+      other_command->saved_cursor.save_col = 0;
     } break;
     case FILE_COMMAND_SPLIT_LINE: {
-      /* TODO: find a good way to send a split line command */
       editor_split_line(editor, command->start.line, command->start.col);
-
-      printf("FILE_COMMAND_SPLIT_LINE\n");
-
-      vector_push(command->text, '\0');
-      printf("%s\n", command->text);
-      cursor_print(start);
-      cursor_print(end);
-
+      other_command->type = FILE_COMMAND_JOIN_LINES;
     } break;
     default: {} break;
     }
+
     editor->cursor = command->saved_cursor;
   }
 }
@@ -322,8 +300,10 @@ static int editor_default_message_handler(struct Element *element, Message messa
         }
       } break;
       case EDITOR_KEY_Z: {
-        if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
-          editor_push_and_process_undo_command(editor);
+        if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL) && EDITOR_MOD_IS_SET(mod, EDITOR_MOD_SHIFT)) {
+          editor_push_and_process_command(editor, editor->file->redo_stack, editor->file->undo_stack);
+        }else if(EDITOR_MOD_IS_SET(mod, EDITOR_MOD_CRTL)) {
+          editor_push_and_process_command(editor, editor->file->undo_stack, editor->file->redo_stack);
         }
       } break;
 
@@ -338,6 +318,12 @@ static int editor_default_message_handler(struct Element *element, Message messa
     /* TODO: Find a good way to handle when the editor has no file */
     if(editor->file) {
       u8 codepoint = (u8)(u64)data;
+      if(editor->selected) {
+        u8 *selection = editor_get_selection(editor);
+        editor_undo_file_command_selection(editor, selection, FILE_COMMAND_INSERT);
+        editor_remove_selection(editor);
+      }
+
       editor_undo_file_command_start(editor, codepoint, FILE_COMMAND_REMOVE, true, 0);
       editor_cursor_insert(editor, codepoint);
       editor_undo_file_command_end(editor);
@@ -611,9 +597,6 @@ void editor_step_next_token_right(Editor *editor) {
 }
 
 void editor_cursor_insert(Editor *editor, u8 codepoint) {
-  if(editor->selected) {
-    editor_remove_selection(editor);
-  }
   File *file = editor->file;
   Cursor *cursor = &editor->cursor;
   assert(cursor->line < file_line_count(file));
@@ -651,8 +634,6 @@ void editor_join_lines(Editor *editor, u32 line0, u32 line1, u32 col) {
   u32 second_line_size = line_size(second_line);
 
   line_copy_at(first_line, second_line, second_line_size, col);
-
-  line_print(first_line);
 
   file_remove_line_at(file, line1 + 1);
 
@@ -804,15 +785,7 @@ void editor_add_range(Editor *editor, u8 *text, Cursor start, Cursor end) {
       editor_cursor_insert(editor, codepoint);
     }
   }
-
-  printf("editor cursor:\n");
-  cursor_print(editor->cursor);
-  printf("end cursor:\n");
-  cursor_print(end);
-
-  assert((editor->cursor.line == end.line) &&
-         (editor->cursor.col == end.col));
-
+  (void)end;
   editor_should_scroll(editor);
   element_redraw(editor, 0);
 }

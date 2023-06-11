@@ -50,11 +50,21 @@ FileCommand *file_command_stack_top(FileCommandStack *stack) {
       top = (FILE_MAX_UNDO_REDO_SIZE - 1);
     }
 
-    printf("peek top:%d\n", top);
-
     command = &stack->commands[top];
   }
   return command;
+}
+
+void file_command_copy(FileCommand *des, FileCommand *src) {
+  des->type = src->type;
+  des->start = src->start;
+  des->end = src->end;
+  des->saved_cursor = src->saved_cursor;
+
+  u32 text_size = vector_size(src->text);
+  for(u32 i = 0; i < text_size; ++i) {
+    vector_push(des->text, src->text[i]);
+  }
 }
 
 File *file_create(u8 *filename) {

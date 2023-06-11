@@ -32,6 +32,7 @@ void file_command_stack_destroy(FileCommandStack *stack);
 FileCommand *file_command_stack_push(FileCommandStack *stack);
 FileCommand *file_command_stack_pop(FileCommandStack *stack);
 FileCommand *file_command_stack_top(FileCommandStack *stack);
+void file_command_copy(FileCommand *des, FileCommand *src);
 
 #define FILE_MAX_NAME_SIZE 256
 typedef struct File {
